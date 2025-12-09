@@ -2,18 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-type Member = {
-  name: string;
-  city: string;
+type ZoneGroup = {
+  label: string;
   timeZone: string;
+  members?: string[];
 };
 
-// Hardcoded team list; use IANA time zones for correct DST handling.
-const TEAM: Member[] = [
-  { name: 'Alice', city: 'New York', timeZone: 'America/New_York' },
-  { name: 'Bala', city: 'London', timeZone: 'Europe/London' },
-  { name: 'Chen', city: 'Singapore', timeZone: 'Asia/Singapore' },
-  { name: 'Daria', city: 'Sydney', timeZone: 'Australia/Sydney' },
+// Focus on time per zone; members are optional and grouped under each zone.
+const ZONES: ZoneGroup[] = [
+  { label: 'New York', timeZone: 'America/New_York', members: ['Alice'] },
+  { label: 'London', timeZone: 'Europe/London', members: ['Bala', 'Priya'] },
+  { label: 'Singapore', timeZone: 'Asia/Singapore', members: ['Chen'] },
+  { label: 'Sydney', timeZone: 'Australia/Sydney', members: ['Daria'] },
+  { label: 'Los Angeles', timeZone: 'America/Los_Angeles' }, // example without members
 ];
 
 const timeFormatter = (tz: string) =>
@@ -30,24 +31,24 @@ const weekdayFormatter = (tz: string) =>
     timeZone: tz,
   });
 
-function formatMemberTime(now: Date, member: Member) {
-  const time = timeFormatter(member.timeZone).format(now);
-  const weekday = weekdayFormatter(member.timeZone).format(now);
+function formatZone(now: Date, zone: ZoneGroup) {
+  const time = timeFormatter(zone.timeZone).format(now);
+  const weekday = weekdayFormatter(zone.timeZone).format(now);
 
   // Compare day relative to device to flag yesterday/tomorrow.
   const deviceDay = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(now);
   let dayBadge: 'yday' | 'today' | 'tomo' = 'today';
   if (weekday !== deviceDay) {
     const deviceDayNum = now.getUTCDay();
-    const memberDayNum = new Date(
+    const zoneDayNum = new Date(
       new Intl.DateTimeFormat('en-US', {
-        timeZone: member.timeZone,
+        timeZone: zone.timeZone,
         year: 'numeric',
         month: 'numeric',
         day: 'numeric',
-      }).format(now)
+      }).format(now),
     ).getUTCDay();
-    const diff = memberDayNum - deviceDayNum;
+    const diff = zoneDayNum - deviceDayNum;
     if (diff === -1 || diff === 6) dayBadge = 'yday';
     else if (diff === 1 || diff === -6) dayBadge = 'tomo';
   }
@@ -65,35 +66,40 @@ export default function App() {
 
   const rows = useMemo(
     () =>
-      TEAM.map((member) => {
-        const info = formatMemberTime(now, member);
-        return { ...member, ...info };
+      ZONES.map((zone) => {
+        const info = formatZone(now, zone);
+        return { ...zone, ...info };
       }),
-    [now]
+    [now],
   );
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <Text style={styles.title}>Team Timeboard</Text>
+      <Text style={styles.title}>Time by Time Zone</Text>
       <ScrollView contentContainerStyle={styles.list}>
         {rows.map((row) => (
-          <View key={row.name} style={styles.card}>
+          <View key={row.label} style={styles.card}>
             <View style={styles.cardHeader}>
-              <Text style={styles.name}>{row.name}</Text>
-              <Text style={styles.city}>{row.city}</Text>
-            </View>
-            <View style={styles.cardFooter}>
-              <Text style={styles.time}>{row.time}</Text>
+              <Text style={styles.name}>{row.label}</Text>
               <View style={[styles.badge, badgeStyle(row.dayBadge)]}>
                 <Text style={styles.badgeText}>
                   {row.dayBadge === 'today'
                     ? row.weekday
                     : row.dayBadge === 'yday'
-                    ? 'Yday'
-                    : 'Tmrw'}
+                      ? 'Yday'
+                      : 'Tmrw'}
                 </Text>
               </View>
+            </View>
+            <View style={styles.cardFooter}>
+              <Text style={styles.time}>{row.time}</Text>
+
+              {row.members && row.members.length > 0 ? (
+                <Text style={styles.members}>{row.members.join(' · ')}</Text>
+              ) : (
+                <Text style={styles.membersMuted}>No members listed</Text>
+              )}
             </View>
           </View>
         ))}
@@ -147,18 +153,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
-  city: {
-    color: '#98c1d9',
-    fontSize: 14,
-  },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 6,
   },
   time: {
     color: '#fff',
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
     letterSpacing: 1,
   },
@@ -172,5 +175,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.4,
+  },
+  members: {
+    color: '#e0fbfc',
+    fontSize: 13,
+  },
+  membersMuted: {
+    color: '#6b7a99',
+    fontSize: 12,
   },
 });

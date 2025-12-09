@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 
 type ZoneGroup = {
   label: string;
@@ -59,39 +60,15 @@ function formatZone(now: Date, zone: ZoneGroup) {
 export default function App() {
   const [now, setNow] = useState(() => new Date());
   const [zones, setZones] = useState<ZoneGroup[]>(INITIAL_ZONES);
-  const [newLabel, setNewLabel] = useState('');
-  const [newTimeZone, setNewTimeZone] = useState('');
-  const [newMembers, setNewMembers] = useState('');
-  const [error, setError] = useState('');
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  function addZone() {
-    const label = newLabel.trim();
-    const timeZone = newTimeZone.trim();
-    if (!label || !timeZone) {
-      setError('Please enter a label and time zone id (e.g., Europe/Paris).');
-      return;
-    }
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone }).format(now);
-    } catch {
-      setError('Invalid time zone id. Use IANA names like America/New_York.');
-      return;
-    }
-    const members = newMembers
-      .split(',')
-      .map((m) => m.trim())
-      .filter(Boolean);
-
-    setZones((prev) => [...prev, { label, timeZone, members: members.length ? members : undefined }]);
-    setNewLabel('');
-    setNewTimeZone('');
-    setNewMembers('');
-    setError('');
+  function addZone(zone: ZoneDraft) {
+    setZones((prev) => [...prev, zone]);
   }
 
   const rows = useMemo(
@@ -106,35 +83,10 @@ export default function App() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <Text style={styles.title}>Time by Time Zone</Text>
-
-      <View style={styles.form}>
-        <TextInput
-          value={newLabel}
-          onChangeText={setNewLabel}
-          placeholder="Label (e.g., Paris)"
-          placeholderTextColor="#6b7a99"
-          style={styles.input}
-        />
-        <TextInput
-          value={newTimeZone}
-          onChangeText={setNewTimeZone}
-          placeholder="Time zone id (e.g., Europe/Paris)"
-          placeholderTextColor="#6b7a99"
-          autoCapitalize="none"
-          style={styles.input}
-        />
-        <TextInput
-          value={newMembers}
-          onChangeText={setNewMembers}
-          placeholder="Members comma-separated (optional)"
-          placeholderTextColor="#6b7a99"
-          autoCapitalize="words"
-          style={styles.input}
-        />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable style={styles.button} onPress={addZone}>
-          <Text style={styles.buttonText}>Add Time Zone</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Time by Time Zone</Text>
+        <Pressable style={styles.iconButton} onPress={() => setShowForm(true)}>
+          <Text style={styles.iconText}>+</Text>
         </Pressable>
       </View>
 
@@ -148,14 +100,13 @@ export default function App() {
                   {row.dayBadge === 'today'
                     ? row.weekday
                     : row.dayBadge === 'yday'
-                      ? 'Yday'
-                      : 'Tmrw'}
+                    ? 'Yday'
+                    : 'Tmrw'}
                 </Text>
               </View>
             </View>
             <View style={styles.cardFooter}>
               <Text style={styles.time}>{row.time}</Text>
-
               {row.members && row.members.length > 0 ? (
                 <Text style={styles.members}>{row.members.join(' · ')}</Text>
               ) : (
@@ -165,6 +116,8 @@ export default function App() {
           </View>
         ))}
       </ScrollView>
+
+      <AddZoneOverlay visible={showForm} onAdd={addZone} onClose={() => setShowForm(false)} />
     </View>
   );
 }
@@ -187,46 +140,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 48,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   title: {
     color: '#fff',
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
   },
-  form: {
-    backgroundColor: '#111a2e',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 14,
-    gap: 8,
-  },
-  input: {
-    backgroundColor: '#1c2541',
-    color: '#e0fbfc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    fontSize: 14,
-  },
-  button: {
+  iconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#5f0f40',
-    borderRadius: 10,
-    paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 2,
+    justifyContent: 'center',
   },
-  buttonText: {
+  iconText: {
     color: '#fff',
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  error: {
-    color: '#e07a5f',
-    fontSize: 12,
   },
   list: {
     paddingBottom: 32,
@@ -261,10 +197,6 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     letterSpacing: 1,
-  },
-  zoneId: {
-    color: '#98c1d9',
-    fontSize: 13,
   },
   badge: {
     paddingHorizontal: 10,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 type ZoneGroup = {
@@ -9,7 +9,7 @@ type ZoneGroup = {
 };
 
 // Focus on time per zone; members are optional and grouped under each zone.
-const ZONES: ZoneGroup[] = [
+const INITIAL_ZONES: ZoneGroup[] = [
   { label: 'New York', timeZone: 'America/New_York', members: ['Alice'] },
   { label: 'London', timeZone: 'Europe/London', members: ['Bala', 'Priya'] },
   { label: 'Singapore', timeZone: 'Asia/Singapore', members: ['Chen'] },
@@ -58,25 +58,86 @@ function formatZone(now: Date, zone: ZoneGroup) {
 
 export default function App() {
   const [now, setNow] = useState(() => new Date());
+  const [zones, setZones] = useState<ZoneGroup[]>(INITIAL_ZONES);
+  const [newLabel, setNewLabel] = useState('');
+  const [newTimeZone, setNewTimeZone] = useState('');
+  const [newMembers, setNewMembers] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(id);
   }, []);
 
+  function addZone() {
+    const label = newLabel.trim();
+    const timeZone = newTimeZone.trim();
+    if (!label || !timeZone) {
+      setError('Please enter a label and time zone id (e.g., Europe/Paris).');
+      return;
+    }
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone }).format(now);
+    } catch {
+      setError('Invalid time zone id. Use IANA names like America/New_York.');
+      return;
+    }
+    const members = newMembers
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
+
+    setZones((prev) => [...prev, { label, timeZone, members: members.length ? members : undefined }]);
+    setNewLabel('');
+    setNewTimeZone('');
+    setNewMembers('');
+    setError('');
+  }
+
   const rows = useMemo(
     () =>
-      ZONES.map((zone) => {
+      zones.map((zone) => {
         const info = formatZone(now, zone);
         return { ...zone, ...info };
       }),
-    [now],
+    [now, zones],
   );
 
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
       <Text style={styles.title}>Time by Time Zone</Text>
+
+      <View style={styles.form}>
+        <TextInput
+          value={newLabel}
+          onChangeText={setNewLabel}
+          placeholder="Label (e.g., Paris)"
+          placeholderTextColor="#6b7a99"
+          style={styles.input}
+        />
+        <TextInput
+          value={newTimeZone}
+          onChangeText={setNewTimeZone}
+          placeholder="Time zone id (e.g., Europe/Paris)"
+          placeholderTextColor="#6b7a99"
+          autoCapitalize="none"
+          style={styles.input}
+        />
+        <TextInput
+          value={newMembers}
+          onChangeText={setNewMembers}
+          placeholder="Members comma-separated (optional)"
+          placeholderTextColor="#6b7a99"
+          autoCapitalize="words"
+          style={styles.input}
+        />
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        <Pressable style={styles.button} onPress={addZone}>
+          <Text style={styles.buttonText}>Add Time Zone</Text>
+        </Pressable>
+      </View>
+
       <ScrollView contentContainerStyle={styles.list}>
         {rows.map((row) => (
           <View key={row.label} style={styles.card}>
@@ -132,6 +193,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 16,
   },
+  form: {
+    backgroundColor: '#111a2e',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 14,
+    gap: 8,
+  },
+  input: {
+    backgroundColor: '#1c2541',
+    color: '#e0fbfc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    fontSize: 14,
+  },
+  button: {
+    backgroundColor: '#5f0f40',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  error: {
+    color: '#e07a5f',
+    fontSize: 12,
+  },
   list: {
     paddingBottom: 32,
     gap: 12,
@@ -147,6 +243,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 6,
+    alignItems: 'center',
   },
   name: {
     color: '#e0fbfc',
@@ -164,6 +261,10 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  zoneId: {
+    color: '#98c1d9',
+    fontSize: 13,
   },
   badge: {
     paddingHorizontal: 10,

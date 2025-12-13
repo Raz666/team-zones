@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { UserTimeBar } from './UserTimeBar';
+import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
 
 type ZoneGroup = {
   label: string;
@@ -28,33 +29,10 @@ const timeFormatter = (tz: string) =>
     timeZone: tz,
   });
 
-const weekdayFormatter = (tz: string) =>
-  new Intl.DateTimeFormat('en-US', {
-    weekday: 'short',
-    timeZone: tz,
-  });
-
-function formatZone(now: Date, zone: ZoneGroup) {
+function formatZone(now: Date, zone: ZoneGroup, deviceTimeZone: string) {
   const time = timeFormatter(zone.timeZone).format(now);
-  const weekday = weekdayFormatter(zone.timeZone).format(now);
-
-  // Compare day relative to device to flag yesterday/tomorrow.
-  const deviceDay = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(now);
-  let dayBadge: 'yday' | 'today' | 'tomo' = 'today';
-  if (weekday !== deviceDay) {
-    const deviceDayNum = now.getUTCDay();
-    const zoneDayNum = new Date(
-      new Intl.DateTimeFormat('en-US', {
-        timeZone: zone.timeZone,
-        year: 'numeric',
-        month: 'numeric',
-        day: 'numeric',
-      }).format(now),
-    ).getUTCDay();
-    const diff = zoneDayNum - deviceDayNum;
-    if (diff === -1 || diff === 6) dayBadge = 'yday';
-    else if (diff === 1 || diff === -6) dayBadge = 'tomo';
-  }
+  const weekday = weekdayInZone(now, zone.timeZone);
+  const dayBadge = dayTagForZone(now, zone.timeZone, deviceTimeZone);
 
   return { time, weekday, dayBadge };
 }
@@ -99,7 +77,8 @@ export default function App() {
   const rows = useMemo(
     () =>
       zones.map((zone) => {
-        const info = formatZone(currentTime, zone);
+        const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const info = formatZone(currentTime, zone, deviceTimeZone);
         return { ...zone, ...info };
       }),
     [currentTime, zones],
@@ -121,13 +100,7 @@ export default function App() {
             <View style={styles.cardHeader}>
               <Text style={styles.name}>{row.label}</Text>
               <View style={[styles.badge, badgeStyle(row.dayBadge)]}>
-                <Text style={styles.badgeText}>
-                  {row.dayBadge === 'today'
-                    ? row.weekday
-                    : row.dayBadge === 'yday'
-                      ? 'Yday'
-                      : 'Tmrw'}
-                </Text>
+                <Text style={styles.badgeText}>{row.weekday}</Text>
               </View>
             </View>
             <View style={styles.cardFooter}>

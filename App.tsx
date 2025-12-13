@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { UserTimeBar } from './UserTimeBar';
 
 type ZoneGroup = {
   label: string;
@@ -58,26 +60,49 @@ function formatZone(now: Date, zone: ZoneGroup) {
 }
 
 export default function App() {
-  const [now, setNow] = useState(() => new Date());
+  const [currentTime, setCurrentTime] = useState(() => new Date());
   const [zones, setZones] = useState<ZoneGroup[]>(INITIAL_ZONES);
   const [showForm, setShowForm] = useState(false);
+  const [paused, setPaused] = useState(false); // pause ticking when user adjusts time
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    if (paused) {
+      return;
+    }
+    setCurrentTime(new Date());
+    const id = setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => clearInterval(id);
-  }, []);
+  }, [paused]);
 
   function addZone(zone: ZoneDraft) {
     setZones((prev) => [...prev, zone]);
   }
 
+  function onChangeTime(event: DateTimePickerEvent, selected?: Date) {
+    if (event.type === 'dismissed') {
+      setShowPicker(false);
+      return;
+    }
+    if (selected) {
+      setCurrentTime(selected);
+    }
+    setShowPicker(false);
+  }
+
+  function resetToRealTime() {
+    setCurrentTime(new Date());
+    setPaused(false);
+    setShowPicker(false);
+  }
+
   const rows = useMemo(
     () =>
       zones.map((zone) => {
-        const info = formatZone(now, zone);
+        const info = formatZone(currentTime, zone);
         return { ...zone, ...info };
       }),
-    [now, zones],
+    [currentTime, zones],
   );
 
   return (
@@ -123,6 +148,24 @@ export default function App() {
         onAdd={addZone}
         onClose={() => setShowForm(false)}
       />
+      <UserTimeBar
+        time={currentTime}
+        onChange={() => {
+          setCurrentTime(new Date());
+          setPaused(true);
+          setShowPicker(true);
+        }}
+        onReset={resetToRealTime}
+      />
+      {showPicker ? (
+        <DateTimePicker
+          value={currentTime}
+          mode="time"
+          is24Hour
+          display="default"
+          onChange={onChangeTime}
+        />
+      ) : null}
     </View>
   );
 }
@@ -130,12 +173,23 @@ export default function App() {
 function badgeStyle(tag: 'yday' | 'today' | 'tomo') {
   switch (tag) {
     case 'yday':
-      return { backgroundColor: '#e07a5f' };
+      return { backgroundColor: '#0e152a' };
     case 'tomo':
-      return { backgroundColor: '#3d5a80' };
+      return { backgroundColor: '#e07a5f' };
     default:
-      return { backgroundColor: '#5f0f40' };
+      return { backgroundColor: '#3d5a80' };
   }
+}
+
+function formatUserTime(date: Date) {
+  return new Intl.DateTimeFormat('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  }).format(date);
 }
 
 const styles = StyleSheet.create({
@@ -144,6 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b132b',
     paddingHorizontal: 16,
     paddingTop: 48,
+    paddingBottom: 96,
   },
   header: {
     flexDirection: 'row',

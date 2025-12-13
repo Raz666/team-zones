@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { IANA_TIMEZONES } from './timezones';
 
 export type ZoneDraft = {
   label: string;
@@ -9,15 +10,34 @@ export type ZoneDraft = {
 
 type AddZoneOverlayProps = {
   visible: boolean;
+  usedTimeZones: string[];
   onAdd: (zone: ZoneDraft) => void;
   onClose: () => void;
 };
 
-export function AddZoneOverlay({ visible, onAdd, onClose }: AddZoneOverlayProps) {
+export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZoneOverlayProps) {
   const [label, setLabel] = useState('');
   const [timeZone, setTimeZone] = useState('');
   const [membersInput, setMembersInput] = useState('');
+  const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+
+  const allTimeZones: string[] = useMemo(() => {
+    const supportedRaw =
+      typeof (Intl as any).supportedValuesOf === 'function'
+        ? (Intl as any).supportedValuesOf('timeZone')
+        : [];
+    const supported: string[] = Array.isArray(supportedRaw) ? (supportedRaw as string[]) : [];
+    const base = supported.length > 0 ? supported : IANA_TIMEZONES;
+    return Array.from(new Set(base)).sort();
+  }, []);
+
+  const availableOptions: string[] = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const unused = allTimeZones.filter((tz) => !usedTimeZones.includes(tz));
+    if (!term) return unused;
+    return unused.filter((tz) => tz.toLowerCase().includes(term));
+  }, [allTimeZones, search, usedTimeZones]);
 
   if (!visible) {
     return null;
@@ -27,6 +47,7 @@ export function AddZoneOverlay({ visible, onAdd, onClose }: AddZoneOverlayProps)
     setLabel('');
     setTimeZone('');
     setMembersInput('');
+    setSearch('');
     setError('');
   };
 
@@ -34,7 +55,7 @@ export function AddZoneOverlay({ visible, onAdd, onClose }: AddZoneOverlayProps)
     const trimmedLabel = label.trim();
     const trimmedTimeZone = timeZone.trim();
     if (!trimmedLabel || !trimmedTimeZone) {
-      setError('Please enter a label and time zone id (e.g., Europe/Paris).');
+      setError('Select a time zone and provide a label.');
       return;
     }
     try {
@@ -62,24 +83,52 @@ export function AddZoneOverlay({ visible, onAdd, onClose }: AddZoneOverlayProps)
     onClose();
   };
 
+  const handleSelectTz = (tz: string) => {
+    setTimeZone(tz);
+    const city = tz.split('/').pop() || tz;
+    setLabel((prev) => (prev.trim() ? prev : city.replace(/_/g, ' ')));
+    setSearch(tz);
+    setError('');
+  };
+
   return (
     <View style={styles.overlay} pointerEvents="box-none">
       <Pressable style={styles.scrim} onPress={handleCancel} />
       <View style={styles.modal}>
         <Text style={styles.heading}>Add Time Zone</Text>
         <TextInput
-          value={label}
-          onChangeText={setLabel}
-          placeholder="Label (e.g., Paris)"
-          placeholderTextColor="#6b7a99"
-          style={styles.input}
-        />
-        <TextInput
-          value={timeZone}
-          onChangeText={setTimeZone}
-          placeholder="Time zone id (e.g., Europe/Paris)"
+          value={search}
+          onChangeText={(val) => {
+            setSearch(val);
+            setError('');
+          }}
+          placeholder="Search time zone id (e.g., Europe/Paris)"
           placeholderTextColor="#6b7a99"
           autoCapitalize="none"
+          style={styles.input}
+        />
+        <View style={styles.dropdown}>
+          <FlatList
+            data={availableOptions.slice(0, 20)}
+            keyExtractor={(tz: string) => tz}
+            renderItem={({ item }) => (
+              <Pressable onPress={() => handleSelectTz(item)} style={styles.option}>
+                <Text style={styles.optionText}>{item}</Text>
+              </Pressable>
+            )}
+            ListEmptyComponent={<Text style={styles.noResults}>No unused time zones match.</Text>}
+            style={styles.dropdownList}
+            keyboardShouldPersistTaps="handled"
+          />
+        </View>
+        <TextInput
+          value={label}
+          onChangeText={(text) => {
+            setLabel(text);
+            setError('');
+          }}
+          placeholder="Label (auto-filled from city, editable)"
+          placeholderTextColor="#6b7a99"
           style={styles.input}
         />
         <TextInput
@@ -107,22 +156,23 @@ export function AddZoneOverlay({ visible, onAdd, onClose }: AddZoneOverlayProps)
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   scrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   modal: {
-    width: '88%',
+    width: '100%',
     backgroundColor: '#111a2e',
     padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
     gap: 10,
     zIndex: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 12,
   },
   heading: {
     color: '#fff',
@@ -143,6 +193,30 @@ const styles = StyleSheet.create({
   error: {
     color: '#e07a5f',
     fontSize: 12,
+  },
+  dropdown: {
+    maxHeight: 160,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#1c2541',
+  },
+  dropdownList: {
+    maxHeight: 160,
+  },
+  option: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  optionText: {
+    color: '#e0fbfc',
+    fontSize: 14,
+  },
+  noResults: {
+    color: '#6b7a99',
+    fontSize: 12,
+    padding: 12,
   },
   actions: {
     flexDirection: 'row',

@@ -100,8 +100,8 @@ export default function App() {
                   {row.dayBadge === 'today'
                     ? row.weekday
                     : row.dayBadge === 'yday'
-                    ? 'Yday'
-                    : 'Tmrw'}
+                      ? 'Yday'
+                      : 'Tmrw'}
                 </Text>
               </View>
             </View>
@@ -117,7 +117,12 @@ export default function App() {
         ))}
       </ScrollView>
 
-      <AddZoneOverlay visible={showForm} onAdd={addZone} onClose={() => setShowForm(false)} />
+      <AddZoneOverlay
+        visible={showForm}
+        usedTimeZones={zones.map((z) => z.timeZone)}
+        onAdd={addZone}
+        onClose={() => setShowForm(false)}
+      />
     </View>
   );
 }

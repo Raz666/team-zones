@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
+import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import { UserTimeBar } from './UserTimeBar';
 import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
 
@@ -12,13 +13,12 @@ type ZoneGroup = {
   members?: string[];
 };
 
-// Focus on time per zone; members are optional and grouped under each zone.
 const INITIAL_ZONES: ZoneGroup[] = [
   { label: 'New York', timeZone: 'America/New_York', members: ['Alice'] },
   { label: 'London', timeZone: 'Europe/London', members: ['Bala', 'Priya'] },
   { label: 'Singapore', timeZone: 'Asia/Singapore', members: ['Chen'] },
   { label: 'Sydney', timeZone: 'Australia/Sydney', members: ['Daria'] },
-  { label: 'Los Angeles', timeZone: 'America/Los_Angeles' }, // example without members
+  { label: 'Los Angeles', timeZone: 'America/Los_Angeles' },
 ];
 
 const timeFormatter = (tz: string) =>
@@ -33,7 +33,6 @@ function formatZone(now: Date, zone: ZoneGroup, deviceTimeZone: string) {
   const time = timeFormatter(zone.timeZone).format(now);
   const weekday = weekdayInZone(now, zone.timeZone);
   const dayBadge = dayTagForZone(now, zone.timeZone, deviceTimeZone);
-
   return { time, weekday, dayBadge };
 }
 
@@ -41,17 +40,19 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [zones, setZones] = useState<ZoneGroup[]>(INITIAL_ZONES);
   const [showForm, setShowForm] = useState(false);
-  const [paused, setPaused] = useState(false); // pause ticking when user adjusts time
+  const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (paused) {
-      return;
-    }
+    if (paused) return;
     setCurrentTime(new Date());
     const id = setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => clearInterval(id);
   }, [paused]);
+
+  const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   function addZone(zone: ZoneDraft) {
     setZones((prev) => [...prev, zone]);
@@ -74,15 +75,61 @@ export default function App() {
     setShowPicker(false);
   }
 
-  const rows = useMemo(
-    () =>
-      zones.map((zone) => {
-        const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const info = formatZone(currentTime, zone, deviceTimeZone);
-        return { ...zone, ...info };
-      }),
-    [currentTime, zones],
-  );
+  async function onReordered(from: number, to: number) {
+    setZones((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
+  function renderItem({
+    item,
+    onDragStart,
+    onDragEnd,
+    isActive,
+    index,
+  }: DragListRenderItemInfo<ZoneGroup>) {
+    const info = formatZone(currentTime, item, deviceTimeZone);
+    const isHover = hoverIndex === index && activeIndex !== null && activeIndex !== index;
+    return (
+      <Pressable
+        onLongPress={() => {
+          setActiveIndex(index);
+          setHoverIndex(index);
+          onDragStart();
+        }}
+        delayLongPress={400}
+        onPressOut={() => {
+          onDragEnd();
+          setActiveIndex(null);
+          setHoverIndex(null);
+        }}
+        style={[
+          styles.card,
+          isActive && styles.cardActive,
+          !isActive && activeIndex === index && styles.cardArmed,
+          isHover && styles.cardHover,
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={styles.name}>{item.label}</Text>
+          <View style={[styles.badge, badgeStyle(info.dayBadge)]}>
+            <Text style={styles.badgeText}>{info.weekday}</Text>
+          </View>
+        </View>
+        <View style={styles.cardFooter}>
+          <Text style={styles.time}>{info.time}</Text>
+          {item.members && item.members.length > 0 ? (
+            <Text style={styles.members}>{item.members.join(' · ')}</Text>
+          ) : (
+            <Text style={styles.membersMuted}>No members listed</Text>
+          )}
+        </View>
+      </Pressable>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -94,26 +141,14 @@ export default function App() {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.list}>
-        {rows.map((row) => (
-          <View key={row.label} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.name}>{row.label}</Text>
-              <View style={[styles.badge, badgeStyle(row.dayBadge)]}>
-                <Text style={styles.badgeText}>{row.weekday}</Text>
-              </View>
-            </View>
-            <View style={styles.cardFooter}>
-              <Text style={styles.time}>{row.time}</Text>
-              {row.members && row.members.length > 0 ? (
-                <Text style={styles.members}>{row.members.join(' · ')}</Text>
-              ) : (
-                <Text style={styles.membersMuted}>No members listed</Text>
-              )}
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      <DragList
+        contentContainerStyle={styles.list}
+        data={zones}
+        keyExtractor={(item) => `${item.label}-${item.timeZone}`}
+        renderItem={renderItem}
+        onReordered={onReordered}
+        onHoverChanged={(index) => setHoverIndex(index)}
+      />
 
       <AddZoneOverlay
         visible={showForm}
@@ -154,17 +189,6 @@ function badgeStyle(tag: 'yday' | 'today' | 'tomo') {
   }
 }
 
-function formatUserTime(date: Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-}
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -199,14 +223,32 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingBottom: 32,
-    gap: 12,
   },
   card: {
     backgroundColor: '#1c2541',
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
+    borderStyle: 'solid',
     borderColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 12,
+  },
+  cardActive: {
+    transform: [{ scale: 0.94 }],
+    borderColor: '#3d5a80',
+    shadowColor: '#000',
+    borderStyle: 'dashed',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  cardArmed: {
+    borderColor: '#e07a5f',
+  },
+  cardHover: {
+    borderColor: '#98c1d9',
+    backgroundColor: '#23304f',
   },
   cardHeader: {
     flexDirection: 'row',

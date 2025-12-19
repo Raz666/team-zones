@@ -227,26 +227,47 @@ export default function App() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <Text style={styles.title}>Time by Time Zone</Text>
-        <Pressable
-          style={styles.iconButton}
-          onPress={() => {
-            setDraftIndex(null);
-            setActionIndex(null);
-            setShowForm(true);
-          }}
-        >
-          <Text style={styles.iconText}>+</Text>
-        </Pressable>
+        {zones.length > 0 ? (
+          <Pressable
+            style={styles.iconButton}
+            onPress={() => {
+              setDraftIndex(null);
+              setActionIndex(null);
+              setShowForm(true);
+            }}
+          >
+            <Text style={styles.iconText}>+</Text>
+          </Pressable>
+        ) : (
+          <View style={{ width: 36 }} />
+        )}
       </View>
 
-      <DragList
-        contentContainerStyle={styles.list}
-        data={zones}
-        keyExtractor={(item) => `${item.label}-${item.timeZone}`}
-        renderItem={renderItem}
-        onReordered={onReordered}
-        onHoverChanged={(index) => setHoverIndex(index)}
-      />
+      {zones.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>No zones yet</Text>
+          <Text style={styles.emptySubtitle}>Add your first city to see time differences.</Text>
+          <Pressable
+            style={styles.primaryCta}
+            onPress={() => {
+              setDraftIndex(null);
+              setActionIndex(null);
+              setShowForm(true);
+            }}
+          >
+            <Text style={styles.primaryCtaText}>Add a time zone</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <DragList
+          contentContainerStyle={styles.list}
+          data={zones}
+          keyExtractor={(item) => `${item.label}-${item.timeZone}`}
+          renderItem={renderItem}
+          onReordered={onReordered}
+          onHoverChanged={(index) => setHoverIndex(index)}
+        />
+      )}
 
       <AddZoneOverlay
         visible={showForm}
@@ -326,7 +347,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   list: {
-    paddingBottom: 32,
+    paddingBottom: 68,
   },
   cardWrapper: {
     marginBottom: 12,
@@ -421,5 +442,32 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 13,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyTitle: {
+    color: '#e0fbfc',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: '#6b7a99',
+    fontSize: 14,
+  },
+  primaryCta: {
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    backgroundColor: '#5f0f40',
+  },
+  primaryCtaText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

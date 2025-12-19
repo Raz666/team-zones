@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { IANA_TIMEZONES } from './timezones';
 
@@ -11,16 +11,26 @@ export type ZoneDraft = {
 type AddZoneOverlayProps = {
   visible: boolean;
   usedTimeZones: string[];
-  onAdd: (zone: ZoneDraft) => void;
+  mode?: 'add' | 'edit';
+  initialValue?: ZoneDraft;
+  onSubmit: (zone: ZoneDraft) => void;
   onClose: () => void;
 };
 
-export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZoneOverlayProps) {
+export function AddZoneOverlay({
+  visible,
+  usedTimeZones,
+  mode,
+  initialValue,
+  onSubmit,
+  onClose,
+}: AddZoneOverlayProps) {
   const [label, setLabel] = useState('');
   const [timeZone, setTimeZone] = useState('');
   const [membersInput, setMembersInput] = useState('');
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
+  const isEdit = mode === 'edit' || Boolean(initialValue);
 
   const allTimeZones: string[] = useMemo(() => {
     const supportedRaw =
@@ -34,10 +44,29 @@ export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZo
 
   const availableOptions: string[] = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const unused = allTimeZones.filter((tz) => !usedTimeZones.includes(tz));
+    const unused = allTimeZones.filter(
+      (tz) => !usedTimeZones.includes(tz) || tz === initialValue?.timeZone,
+    );
     if (!term) return unused;
     return unused.filter((tz) => tz.toLowerCase().includes(term));
-  }, [allTimeZones, search, usedTimeZones]);
+  }, [allTimeZones, search, usedTimeZones, initialValue]);
+
+  useEffect(() => {
+    if (!visible) return;
+    if (initialValue) {
+      setLabel(initialValue.label);
+      setTimeZone(initialValue.timeZone);
+      setMembersInput(initialValue.members?.join(', ') ?? '');
+      setSearch(initialValue.timeZone);
+      setError('');
+      return;
+    }
+    setLabel('');
+    setTimeZone('');
+    setMembersInput('');
+    setSearch('');
+    setError('');
+  }, [visible, initialValue]);
 
   if (!visible) {
     return null;
@@ -51,7 +80,7 @@ export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZo
     setError('');
   };
 
-  const handleAdd = () => {
+  const handleSubmit = () => {
     const trimmedLabel = label.trim();
     const trimmedTimeZone = timeZone.trim();
     if (!trimmedLabel || !trimmedTimeZone) {
@@ -69,7 +98,7 @@ export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZo
       .map((m) => m.trim())
       .filter(Boolean);
 
-    onAdd({
+    onSubmit({
       label: trimmedLabel,
       timeZone: trimmedTimeZone,
       members: members.length ? members : undefined,
@@ -91,11 +120,14 @@ export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZo
     setError('');
   };
 
+  const headingText = isEdit ? 'Edit Time Zone' : 'Add Time Zone';
+  const submitLabel = isEdit ? 'Save' : 'Add';
+
   return (
     <View style={styles.overlay} pointerEvents="box-none">
       <Pressable style={styles.scrim} onPress={handleCancel} />
       <View style={styles.modal}>
-        <Text style={styles.heading}>Add Time Zone</Text>
+        <Text style={styles.heading}>{headingText}</Text>
         <TextInput
           value={search}
           onChangeText={(val) => {
@@ -144,8 +176,8 @@ export function AddZoneOverlay({ visible, usedTimeZones, onAdd, onClose }: AddZo
           <Pressable style={styles.secondaryButton} onPress={handleCancel}>
             <Text style={styles.secondaryText}>Cancel</Text>
           </Pressable>
-          <Pressable style={styles.primaryButton} onPress={handleAdd}>
-            <Text style={styles.primaryText}>Add</Text>
+          <Pressable style={styles.primaryButton} onPress={handleSubmit}>
+            <Text style={styles.primaryText}>{submitLabel}</Text>
           </Pressable>
         </View>
       </View>

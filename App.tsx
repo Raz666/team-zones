@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -44,6 +44,11 @@ export default function App() {
   const [showPicker, setShowPicker] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [actionIndex, setActionIndex] = useState<number | null>(null);
+  const [draftIndex, setDraftIndex] = useState<number | null>(null);
+  const longPressFlag = useRef(false);
+  const actionAnimRefs = useRef<Record<number, Animated.Value>>({});
+  const actionVisibility = useRef<Record<number, boolean>>({});
 
   useEffect(() => {
     if (paused) return;
@@ -54,8 +59,33 @@ export default function App() {
 
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
-  function addZone(zone: ZoneDraft) {
-    setZones((prev) => [...prev, zone]);
+  const usedTimeZones = useMemo(
+    () =>
+      zones
+        .filter((_, idx) => draftIndex === null || idx !== draftIndex)
+        .map((z) => z.timeZone),
+    [zones, draftIndex],
+  );
+
+  function submitZone(zone: ZoneDraft) {
+    setZones((prev) => {
+      if (draftIndex === null) {
+        return [...prev, zone];
+      }
+      return prev.map((item, idx) => (idx === draftIndex ? { ...item, ...zone } : item));
+    });
+    setShowForm(false);
+    setDraftIndex(null);
+    setActionIndex(null);
+  }
+
+  function deleteZone(index: number) {
+    setZones((prev) => prev.filter((_, i) => i !== index));
+    setActionIndex(null);
+    if (draftIndex === index) {
+      setDraftIndex(null);
+      setShowForm(false);
+    }
   }
 
   function onChangeTime(event: DateTimePickerEvent, selected?: Date) {
@@ -76,6 +106,7 @@ export default function App() {
   }
 
   async function onReordered(from: number, to: number) {
+    setActionIndex(null);
     setZones((prev) => {
       const next = [...prev];
       const [moved] = next.splice(from, 1);
@@ -93,41 +124,101 @@ export default function App() {
   }: DragListRenderItemInfo<ZoneGroup>) {
     const info = formatZone(currentTime, item, deviceTimeZone);
     const isHover = hoverIndex === index && activeIndex !== null && activeIndex !== index;
+    const showActions = actionIndex === index && !isActive;
+    const actionAnim =
+      actionAnimRefs.current[index] || (actionAnimRefs.current[index] = new Animated.Value(0));
+
+    const handlePress = () => {
+      if (longPressFlag.current) {
+        longPressFlag.current = false;
+        return;
+      }
+      setActionIndex((prev) => (prev === index ? null : index));
+    };
+
+    const handleEdit = () => {
+      setDraftIndex(index);
+      setShowForm(true);
+      setActionIndex(null);
+    };
+
+    const handleDelete = () => {
+      deleteZone(index);
+    };
+
+    const wasVisible = actionVisibility.current[index] || false;
+    if (showActions && !wasVisible) {
+      actionVisibility.current[index] = true;
+      actionAnim.setValue(0);
+      Animated.timing(actionAnim, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }).start();
+    } else if (!showActions && wasVisible) {
+      actionVisibility.current[index] = false;
+      actionAnim.setValue(0);
+    }
+
+    const actionStyle = {
+      opacity: actionAnim,
+      transform: [
+        {
+          translateY: actionAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }),
+        },
+      ],
+    };
+
     return (
-      <Pressable
-        onLongPress={() => {
-          setActiveIndex(index);
-          setHoverIndex(index);
-          onDragStart();
-        }}
-        delayLongPress={400}
-        onPressOut={() => {
-          onDragEnd();
-          setActiveIndex(null);
-          setHoverIndex(null);
-        }}
-        style={[
-          styles.card,
-          isActive && styles.cardActive,
-          !isActive && activeIndex === index && styles.cardArmed,
-          isHover && styles.cardHover,
-        ]}
-      >
-        <View style={styles.cardHeader}>
-          <Text style={styles.name}>{item.label}</Text>
-          <View style={[styles.badge, badgeStyle(info.dayBadge)]}>
-            <Text style={styles.badgeText}>{info.weekday}</Text>
+      <View style={styles.cardWrapper}>
+        <Pressable
+          onPress={handlePress}
+          onLongPress={() => {
+            longPressFlag.current = true;
+            setActionIndex(null);
+            setActiveIndex(index);
+            setHoverIndex(index);
+            onDragStart();
+          }}
+          delayLongPress={400}
+          onPressOut={() => {
+            onDragEnd();
+            setActiveIndex(null);
+            setHoverIndex(null);
+          }}
+          style={[
+            styles.card,
+            isActive && styles.cardActive,
+            !isActive && activeIndex === index && styles.cardArmed,
+            isHover && styles.cardHover,
+          ]}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={styles.name}>{item.label}</Text>
+            <View style={[styles.badge, badgeStyle(info.dayBadge)]}>
+              <Text style={styles.badgeText}>{info.weekday}</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.cardFooter}>
-          <Text style={styles.time}>{info.time}</Text>
-          {item.members && item.members.length > 0 ? (
-            <Text style={styles.members}>{item.members.join(' · ')}</Text>
-          ) : (
-            <Text style={styles.membersMuted}>No members listed</Text>
-          )}
-        </View>
-      </Pressable>
+          <View style={styles.cardFooter}>
+            <Text style={styles.time}>{info.time}</Text>
+            {item.members && item.members.length > 0 ? (
+              <Text style={styles.members}>{item.members.join(' · ')}</Text>
+            ) : (
+              <Text style={styles.membersMuted}>No members listed</Text>
+            )}
+          </View>
+        </Pressable>
+        {showActions ? (
+          <Animated.View style={[styles.cardActions, actionStyle]}>
+            <Pressable style={[styles.actionButton, styles.secondaryAction]} onPress={handleDelete}>
+              <Text style={styles.actionText}>Delete</Text>
+            </Pressable>
+            <Pressable style={[styles.actionButton]} onPress={handleEdit}>
+              <Text style={styles.actionText}>Edit</Text>
+            </Pressable>
+          </Animated.View>
+        ) : null}
+      </View>
     );
   }
 
@@ -136,7 +227,14 @@ export default function App() {
       <StatusBar style="light" />
       <View style={styles.header}>
         <Text style={styles.title}>Time by Time Zone</Text>
-        <Pressable style={styles.iconButton} onPress={() => setShowForm(true)}>
+        <Pressable
+          style={styles.iconButton}
+          onPress={() => {
+            setDraftIndex(null);
+            setActionIndex(null);
+            setShowForm(true);
+          }}
+        >
           <Text style={styles.iconText}>+</Text>
         </Pressable>
       </View>
@@ -152,9 +250,15 @@ export default function App() {
 
       <AddZoneOverlay
         visible={showForm}
-        usedTimeZones={zones.map((z) => z.timeZone)}
-        onAdd={addZone}
-        onClose={() => setShowForm(false)}
+        usedTimeZones={usedTimeZones}
+        initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
+        mode={draftIndex !== null ? 'edit' : 'add'}
+        onSubmit={submitZone}
+        onClose={() => {
+          setShowForm(false);
+          setDraftIndex(null);
+          longPressFlag.current = false;
+        }}
       />
       <UserTimeBar
         time={currentTime}
@@ -224,6 +328,9 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 32,
   },
+  cardWrapper: {
+    marginBottom: 12,
+  },
   card: {
     backgroundColor: '#1c2541',
     borderRadius: 12,
@@ -231,7 +338,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderStyle: 'solid',
     borderColor: 'rgba(255,255,255,0.08)',
-    marginBottom: 12,
   },
   cardActive: {
     transform: [{ scale: 0.94 }],
@@ -291,5 +397,29 @@ const styles = StyleSheet.create({
   membersMuted: {
     color: '#6b7a99',
     fontSize: 12,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    alignSelf: 'stretch',
+  },
+  actionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#5f0f40',
+  },
+  secondaryAction: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  actionText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

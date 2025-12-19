@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { FlatList, Pressable, TextInput } from 'react-native';
+import { useTheme } from '@shopify/restyle';
+
+import type { AppTheme } from './src/theme/themes';
+import { Box, Button, Text } from './src/theme/components';
 import { IANA_TIMEZONES } from './timezones';
 
 export type ZoneDraft = {
@@ -25,6 +29,7 @@ export function AddZoneOverlay({
   onSubmit,
   onClose,
 }: AddZoneOverlayProps) {
+  const theme = useTheme<AppTheme>();
   const [label, setLabel] = useState('');
   const [timeZone, setTimeZone] = useState('');
   const [membersInput, setMembersInput] = useState('');
@@ -123,158 +128,128 @@ export function AddZoneOverlay({
   const headingText = isEdit ? 'Edit Time Zone' : 'Add Time Zone';
   const submitLabel = isEdit ? 'Save' : 'Add';
 
+  const inputStyle = {
+    backgroundColor: theme.colors.card,
+    color: theme.colors.textSecondary,
+    borderRadius: theme.borderRadii.s,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.sPlus,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    fontSize: 14,
+  };
+
   return (
-    <View style={styles.overlay} pointerEvents="box-none">
-      <Pressable style={styles.scrim} onPress={handleCancel} />
-      <View style={styles.modal}>
-        <Text style={styles.heading}>{headingText}</Text>
+    <Box
+      position="absolute"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      justifyContent="flex-start"
+      pointerEvents="box-none"
+    >
+      <Pressable
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+        onPress={handleCancel}
+      >
+        <Box flex={1} backgroundColor="overlay" />
+      </Pressable>
+      <Box
+        width="100%"
+        backgroundColor="backgroundAlt"
+        padding="l"
+        zIndex={1}
+        style={{
+          shadowColor: '#000',
+          shadowOpacity: 0.2,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 12,
+        }}
+      >
+        <Text variant="heading2" color="text">
+          {headingText}
+        </Text>
         <TextInput
+          style={[inputStyle, { marginTop: theme.spacing.xsPlus }]}
           value={search}
           onChangeText={(val) => {
             setSearch(val);
             setError('');
           }}
           placeholder="Search time zone id (e.g., Europe/Paris)"
-          placeholderTextColor="#6b7a99"
+          placeholderTextColor={theme.colors.muted}
           autoCapitalize="none"
-          style={styles.input}
         />
-        <View style={styles.dropdown}>
+        <Box
+          marginTop="sPlus"
+          maxHeight={160}
+          borderWidth={1}
+          borderColor="borderSubtle"
+          borderRadius="s"
+          overflow="hidden"
+          backgroundColor="card"
+        >
           <FlatList
             data={availableOptions.slice(0, 20)}
             keyExtractor={(tz: string) => tz}
             renderItem={({ item }) => (
-              <Pressable onPress={() => handleSelectTz(item)} style={styles.option}>
-                <Text style={styles.optionText}>{item}</Text>
+              <Pressable onPress={() => handleSelectTz(item)}>
+                <Box paddingVertical="sPlus" paddingHorizontal="m">
+                  <Text variant="body" color="textSecondary">
+                    {item}
+                  </Text>
+                </Box>
               </Pressable>
             )}
-            ListEmptyComponent={<Text style={styles.noResults}>No unused time zones match.</Text>}
-            style={styles.dropdownList}
+            ListEmptyComponent={
+              <Box padding="m">
+                <Text variant="caption" color="muted">
+                  No unused time zones match.
+                </Text>
+              </Box>
+            }
+            style={{ maxHeight: 160 }}
             keyboardShouldPersistTaps="handled"
           />
-        </View>
+        </Box>
         <TextInput
+          style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={label}
           onChangeText={(text) => {
             setLabel(text);
             setError('');
           }}
           placeholder="Label (auto-filled from city, editable)"
-          placeholderTextColor="#6b7a99"
-          style={styles.input}
+          placeholderTextColor={theme.colors.muted}
         />
         <TextInput
+          style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={membersInput}
           onChangeText={setMembersInput}
           placeholder="Members comma-separated (optional)"
-          placeholderTextColor="#6b7a99"
+          placeholderTextColor={theme.colors.muted}
           autoCapitalize="words"
-          style={styles.input}
         />
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <View style={styles.actions}>
-          <Pressable style={styles.secondaryButton} onPress={handleCancel}>
-            <Text style={styles.secondaryText}>Cancel</Text>
-          </Pressable>
-          <Pressable style={styles.primaryButton} onPress={handleSubmit}>
-            <Text style={styles.primaryText}>{submitLabel}</Text>
-          </Pressable>
-        </View>
-      </View>
-    </View>
+        {error ? (
+          <Text variant="caption" color="danger" marginTop="xsPlus">
+            {error}
+          </Text>
+        ) : null}
+        <Box flexDirection="row" justifyContent="flex-end" marginTop="s">
+          <Box marginRight="m">
+            <Button label="Cancel" variant="ghost" onPress={handleCancel} />
+          </Box>
+          <Button label={submitLabel} onPress={handleSubmit} />
+        </Box>
+      </Box>
+    </Box>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-start',
-  },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  modal: {
-    width: '100%',
-    backgroundColor: '#111a2e',
-    padding: 16,
-    gap: 10,
-    zIndex: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 12,
-  },
-  heading: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  input: {
-    backgroundColor: '#1c2541',
-    color: '#e0fbfc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    fontSize: 14,
-  },
-  error: {
-    color: '#e07a5f',
-    fontSize: 12,
-  },
-  dropdown: {
-    maxHeight: 160,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#1c2541',
-  },
-  dropdownList: {
-    maxHeight: 160,
-  },
-  option: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  optionText: {
-    color: '#e0fbfc',
-    fontSize: 14,
-  },
-  noResults: {
-    color: '#6b7a99',
-    fontSize: 12,
-    padding: 12,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 12,
-    marginTop: 4,
-  },
-  secondaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  secondaryText: {
-    color: '#e0fbfc',
-    fontWeight: '600',
-  },
-  primaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: '#5f0f40',
-  },
-  primaryText: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-});

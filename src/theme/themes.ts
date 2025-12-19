@@ -1,0 +1,63 @@
+import { baseTheme } from './theme';
+
+export const darkTheme = {
+  ...baseTheme,
+  colors: {
+    ...baseTheme.colors,
+    background: '#0b132b',
+    backgroundAlt: '#0e152a',
+    card: '#1c2541',
+    cardHover: '#23304f',
+    primary: '#5f0f40',
+    primarySoft: '#78345d',
+    primaryStrong: '#3d5a80',
+    accent: '#98c1d9',
+    text: '#ffffff',
+    textSecondary: '#e0fbfc',
+    muted: '#6b7a99',
+    textInverse: '#ffffff',
+    borderSubtle: 'rgba(255,255,255,0.08)',
+    cardBorderActive: '#3d5a80',
+    cardBorderHover: '#98c1d9',
+    cardBorderArmed: '#e07a5f',
+    badgeYesterday: '#0e152a',
+    badgeToday: '#3d5a80',
+    badgeTomorrow: '#e07a5f',
+    danger: '#e07a5f',
+    success: '#4ade80',
+    overlay: 'rgba(0,0,0,0.35)',
+    transparent: 'transparent',
+  },
+};
+
+export const lightTheme = {
+  ...baseTheme,
+  colors: {
+    ...baseTheme.colors,
+    background: '#f5f7fb',
+    backgroundAlt: '#edf2fb',
+    card: '#ffffff',
+    cardHover: '#e8f0ff',
+    primary: '#7b205c',
+    primarySoft: '#f1dce7',
+    primaryStrong: '#4f6fa3',
+    accent: '#557fa6',
+    text: '#0b132b',
+    textSecondary: '#1f2a44',
+    muted: '#5c6883',
+    textInverse: '#ffffff',
+    borderSubtle: '#d5dbe8',
+    cardBorderActive: '#4f6fa3',
+    cardBorderHover: '#557fa6',
+    cardBorderArmed: '#e29074',
+    badgeYesterday: '#dce5f7',
+    badgeToday: '#4f6fa3',
+    badgeTomorrow: '#e29074',
+    danger: '#d25a4f',
+    success: '#2f9f60',
+    overlay: 'rgba(11,19,43,0.15)',
+    transparent: 'transparent',
+  },
+};
+
+export type AppTheme = typeof darkTheme;

@@ -1,17 +1,27 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { ThemeProvider } from '@shopify/restyle';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
+
 import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import { UserTimeBar } from './UserTimeBar';
 import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
+import { Box, Button, Text } from './src/theme/components';
+import type { AppTheme } from './src/theme/themes';
+import { darkTheme, lightTheme } from './src/theme/themes';
 
 type ZoneGroup = {
   label: string;
   timeZone: string;
   members?: string[];
 };
+
+type DayBadgeTag = 'yday' | 'today' | 'tomo';
+
+const AnimatedBox = Animated.createAnimatedComponent(Box);
 
 const INITIAL_ZONES: ZoneGroup[] = [
   { label: 'New York', timeZone: 'America/New_York', members: ['Alice'] },
@@ -36,7 +46,22 @@ function formatZone(now: Date, zone: ZoneGroup, deviceTimeZone: string) {
   return { time, weekday, dayBadge };
 }
 
+function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
+  switch (tag) {
+    case 'yday':
+      return 'badgeYesterday';
+    case 'tomo':
+      return 'badgeTomorrow';
+    default:
+      return 'badgeToday';
+  }
+}
+
 export default function App() {
+  const [mode, setMode] = useState<'light' | 'dark'>('dark');
+  const theme: AppTheme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
+  const isDark = mode === 'dark';
+
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [zones, setZones] = useState<ZoneGroup[]>(INITIAL_ZONES);
   const [showForm, setShowForm] = useState(false);
@@ -61,9 +86,7 @@ export default function App() {
 
   const usedTimeZones = useMemo(
     () =>
-      zones
-        .filter((_, idx) => draftIndex === null || idx !== draftIndex)
-        .map((z) => z.timeZone),
+      zones.filter((_, idx) => draftIndex === null || idx !== draftIndex).map((z) => z.timeZone),
     [zones, draftIndex],
   );
 
@@ -169,8 +192,34 @@ export default function App() {
       ],
     };
 
+    const cardStateStyle = [
+      isActive
+        ? {
+            transform: [{ scale: 0.94 }],
+            borderColor: theme.colors.cardBorderActive,
+            borderStyle: 'dashed' as const,
+            shadowColor: '#000',
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            shadowOffset: { width: 0, height: 6 },
+            elevation: 8,
+          }
+        : null,
+      !isActive && activeIndex === index
+        ? {
+            borderColor: theme.colors.cardBorderArmed,
+          }
+        : null,
+      isHover
+        ? {
+            borderColor: theme.colors.cardBorderHover,
+            backgroundColor: theme.colors.cardHover,
+          }
+        : null,
+    ];
+
     return (
-      <View style={styles.cardWrapper}>
+      <Box marginBottom="m">
         <Pressable
           onPress={handlePress}
           onLongPress={() => {
@@ -186,288 +235,232 @@ export default function App() {
             setActiveIndex(null);
             setHoverIndex(null);
           }}
-          style={[
-            styles.card,
-            isActive && styles.cardActive,
-            !isActive && activeIndex === index && styles.cardArmed,
-            isHover && styles.cardHover,
-          ]}
         >
-          <View style={styles.cardHeader}>
-            <Text style={styles.name}>{item.label}</Text>
-            <View style={[styles.badge, badgeStyle(info.dayBadge)]}>
-              <Text style={styles.badgeText}>{info.weekday}</Text>
-            </View>
-          </View>
-          <View style={styles.cardFooter}>
-            <Text style={styles.time}>{info.time}</Text>
-            {item.members && item.members.length > 0 ? (
-              <Text style={styles.members}>{item.members.join(' · ')}</Text>
-            ) : (
-              <Text style={styles.membersMuted}>No members listed</Text>
-            )}
-          </View>
+          <Box
+            backgroundColor="card"
+            borderRadius="l"
+            padding="mPlus"
+            borderWidth={1}
+            borderColor="borderSubtle"
+            style={cardStateStyle}
+          >
+            <Box
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
+              marginBottom="xsPlus"
+            >
+              <Text variant="subtitle" color="textSecondary">
+                {item.label}
+              </Text>
+              <Box
+                paddingHorizontal="sPlus"
+                paddingVertical="xs"
+                borderRadius="s"
+                backgroundColor={badgeColor(info.dayBadge)}
+              >
+                <Text variant="label">{info.weekday}</Text>
+              </Box>
+            </Box>
+            <Box
+              flexDirection="row"
+              alignItems="center"
+              justifyContent="space-between"
+              marginBottom="xsPlus"
+            >
+              <Text variant="time">{info.time}</Text>
+              {item.members && item.members.length > 0 ? (
+                <Text variant="body" color="textSecondary">
+                  {item.members.join(' • ')}
+                </Text>
+              ) : (
+                <Text variant="caption" color="muted">
+                  No members listed
+                </Text>
+              )}
+            </Box>
+          </Box>
         </Pressable>
         {showActions ? (
-          <Animated.View style={[styles.cardActions, actionStyle]}>
-            <Pressable style={[styles.actionButton, styles.secondaryAction]} onPress={handleDelete}>
-              <Text style={styles.actionText}>Delete</Text>
+          <AnimatedBox
+            style={actionStyle}
+            flexDirection="row"
+            alignItems="center"
+            justifyContent="space-between"
+            marginTop="xsPlus"
+          >
+            <Pressable
+              onPress={handleDelete}
+              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, flex: 1 })}
+            >
+              <Box
+                paddingVertical="s"
+                paddingHorizontal="m"
+                borderRadius="s"
+                borderWidth={1}
+                borderColor="borderSubtle"
+                backgroundColor="transparent"
+                alignItems="center"
+              >
+                <Text variant="body">Delete</Text>
+              </Box>
             </Pressable>
-            <Pressable style={[styles.actionButton]} onPress={handleEdit}>
-              <Text style={styles.actionText}>Edit</Text>
+            <Box width={theme.spacing.s} />
+            <Pressable
+              onPress={handleEdit}
+              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, flex: 1 })}
+            >
+              <Box
+                paddingVertical="s"
+                paddingHorizontal="m"
+                borderRadius="s"
+                backgroundColor="primary"
+                borderWidth={1}
+                borderColor="primaryStrong"
+                alignItems="center"
+              >
+                <Text variant="buttonLabel">{'Edit'}</Text>
+              </Box>
             </Pressable>
-          </Animated.View>
+          </AnimatedBox>
         ) : null}
-      </View>
+      </Box>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <View style={styles.header}>
-        <Text style={styles.title}>Time by Time Zone</Text>
-        {zones.length > 0 ? (
-          <Pressable
-            style={styles.iconButton}
-            onPress={() => {
-              setDraftIndex(null);
-              setActionIndex(null);
-              setShowForm(true);
-            }}
+    <SafeAreaProvider>
+      <ThemeProvider theme={theme}>
+        <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.colors.background} />
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <Box
+            flex={1}
+            backgroundColor="background"
+            paddingHorizontal="l"
+            paddingTop="4xl"
+            paddingBottom="6xl"
           >
-            <Text style={styles.iconText}>+</Text>
-          </Pressable>
-        ) : (
-          <View style={{ width: 36 }} />
-        )}
-      </View>
+            <Box
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
+              marginBottom="l"
+            >
+              <Text variant="heading2">Time by Time Zone</Text>
+              <Box flexDirection="row" alignItems="center">
+                <Pressable
+                  onPress={() => setMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.8 : 1,
+                    marginRight: theme.spacing.s,
+                  })}
+                >
+                  <Box
+                    paddingHorizontal="sPlus"
+                    paddingVertical="xsPlus"
+                    borderRadius="m"
+                    backgroundColor="primarySoft"
+                    borderWidth={1}
+                    borderColor="borderSubtle"
+                  >
+                    <Text variant="caption" color="textSecondary">
+                      {isDark ? 'Dark' : 'Light'} mode
+                    </Text>
+                  </Box>
+                </Pressable>
+                {zones.length > 0 ? (
+                  <Pressable
+                    onPress={() => {
+                      setDraftIndex(null);
+                      setActionIndex(null);
+                      setShowForm(true);
+                    }}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+                  >
+                    <Box
+                      width={36}
+                      height={36}
+                      borderRadius="xl"
+                      backgroundColor="primary"
+                      alignItems="center"
+                      justifyContent="center"
+                    >
+                      <Text variant="heading2" color="textInverse" style={{ fontSize: 20 }}>
+                        +
+                      </Text>
+                    </Box>
+                  </Pressable>
+                ) : (
+                  <Box width={36} />
+                )}
+              </Box>
+            </Box>
 
-      {zones.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No zones yet</Text>
-          <Text style={styles.emptySubtitle}>Add your first city to see time differences.</Text>
-          <Pressable
-            style={styles.primaryCta}
-            onPress={() => {
-              setDraftIndex(null);
-              setActionIndex(null);
-              setShowForm(true);
-            }}
-          >
-            <Text style={styles.primaryCtaText}>Add a time zone</Text>
-          </Pressable>
-        </View>
-      ) : (
-        <DragList
-          contentContainerStyle={styles.list}
-          data={zones}
-          keyExtractor={(item) => `${item.label}-${item.timeZone}`}
-          renderItem={renderItem}
-          onReordered={onReordered}
-          onHoverChanged={(index) => setHoverIndex(index)}
-        />
-      )}
+            {zones.length === 0 ? (
+              <Box flex={1} justifyContent="center" alignItems="center">
+                <Text variant="heading2" color="textSecondary">
+                  No zones yet
+                </Text>
+                <Box marginTop="xsPlus">
+                  <Text variant="caption" color="muted">
+                    Add your first city to see time differences.
+                  </Text>
+                </Box>
+                <Box marginTop="sPlus">
+                  <Button
+                    label="Add a time zone"
+                    onPress={() => {
+                      setDraftIndex(null);
+                      setActionIndex(null);
+                      setShowForm(true);
+                    }}
+                  />
+                </Box>
+              </Box>
+            ) : (
+              <DragList
+                contentContainerStyle={{ paddingBottom: theme.spacing['5xl'] }}
+                data={zones}
+                keyExtractor={(item) => `${item.label}-${item.timeZone}`}
+                renderItem={renderItem}
+                onReordered={onReordered}
+                onHoverChanged={(index) => setHoverIndex(index)}
+              />
+            )}
 
-      <AddZoneOverlay
-        visible={showForm}
-        usedTimeZones={usedTimeZones}
-        initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
-        mode={draftIndex !== null ? 'edit' : 'add'}
-        onSubmit={submitZone}
-        onClose={() => {
-          setShowForm(false);
-          setDraftIndex(null);
-          longPressFlag.current = false;
-        }}
-      />
-      <UserTimeBar
-        time={currentTime}
-        onChange={() => {
-          setCurrentTime(new Date());
-          setPaused(true);
-          setShowPicker(true);
-        }}
-        onReset={resetToRealTime}
-      />
-      {showPicker ? (
-        <DateTimePicker
-          value={currentTime}
-          mode="time"
-          is24Hour
-          display="default"
-          onChange={onChangeTime}
-        />
-      ) : null}
-    </View>
+            <AddZoneOverlay
+              visible={showForm}
+              usedTimeZones={usedTimeZones}
+              initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
+              mode={draftIndex !== null ? 'edit' : 'add'}
+              onSubmit={submitZone}
+              onClose={() => {
+                setShowForm(false);
+                setDraftIndex(null);
+                longPressFlag.current = false;
+              }}
+            />
+            <UserTimeBar
+              time={currentTime}
+              onChange={() => {
+                setCurrentTime(new Date());
+                setPaused(true);
+                setShowPicker(true);
+              }}
+              onReset={resetToRealTime}
+            />
+            {showPicker ? (
+              <DateTimePicker
+                value={currentTime}
+                mode="time"
+                is24Hour
+                display="default"
+                onChange={onChangeTime}
+              />
+            ) : null}
+          </Box>
+        </SafeAreaView>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
-
-function badgeStyle(tag: 'yday' | 'today' | 'tomo') {
-  switch (tag) {
-    case 'yday':
-      return { backgroundColor: '#0e152a' };
-    case 'tomo':
-      return { backgroundColor: '#e07a5f' };
-    default:
-      return { backgroundColor: '#3d5a80' };
-  }
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0b132b',
-    paddingHorizontal: 16,
-    paddingTop: 48,
-    paddingBottom: 96,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#5f0f40',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  list: {
-    paddingBottom: 68,
-  },
-  cardWrapper: {
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: '#1c2541',
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  cardActive: {
-    transform: [{ scale: 0.94 }],
-    borderColor: '#3d5a80',
-    shadowColor: '#000',
-    borderStyle: 'dashed',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 8,
-  },
-  cardArmed: {
-    borderColor: '#e07a5f',
-  },
-  cardHover: {
-    borderColor: '#98c1d9',
-    backgroundColor: '#23304f',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-    alignItems: 'center',
-  },
-  name: {
-    color: '#e0fbfc',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  time: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-  },
-  members: {
-    color: '#e0fbfc',
-    fontSize: 13,
-  },
-  membersMuted: {
-    color: '#6b7a99',
-    fontSize: 12,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 6,
-    alignSelf: 'stretch',
-  },
-  actionButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: '#5f0f40',
-  },
-  secondaryAction: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  actionText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyTitle: {
-    color: '#e0fbfc',
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  emptySubtitle: {
-    color: '#6b7a99',
-    fontSize: 14,
-  },
-  primaryCta: {
-    marginTop: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    backgroundColor: '#5f0f40',
-  },
-  primaryCtaText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-});

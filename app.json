@@ -1,30 +1,48 @@
 {
   "expo": {
-    "name": "team-zones",
+    "name": "Team Zones",
     "slug": "team-zones",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "teamzones",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0B132B"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.razart.teamzones"
+    },
+    "androidStatusBar": {
+      "backgroundColor": "#0B132B",
+      "barStyle": "light-content",
+      "translucent": false
     },
     "android": {
+      "package": "com.razart.teamzones",
+      "versionCode": 1,
+      "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0B132B"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": []
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "themeColor": "#0B132B",
+      "backgroundColor": "#0B132B"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "759a4f4a-0848-4dd7-aaf2-9e8d8f02574e"
+      }
     }
   }
 }

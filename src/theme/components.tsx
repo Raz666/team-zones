@@ -23,6 +23,8 @@ type ButtonProps = {
   disabled?: boolean;
   loading?: boolean;
   fullWidth?: boolean;
+  icon?: React.ReactNode;
+  iconPosition?: 'left' | 'right';
 };
 
 export const Button: React.FC<ButtonProps> = ({
@@ -32,6 +34,8 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   loading,
   fullWidth,
+  icon,
+  iconPosition = 'left',
 }) => {
   const theme = useTheme<AppTheme>();
   const isDisabled = disabled || loading;
@@ -68,6 +72,11 @@ export const Button: React.FC<ButtonProps> = ({
         justifyContent="center"
         flexDirection="row"
       >
+        {icon && iconPosition === 'left' ? (
+          <Box marginRight="s" alignItems="center" justifyContent="center">
+            {icon}
+          </Box>
+        ) : null}
         {loading && (
           <Box marginRight="s">
             <ActivityIndicator color={textColor} />
@@ -76,6 +85,11 @@ export const Button: React.FC<ButtonProps> = ({
         <Text variant="buttonLabel" style={{ color: textColor }}>
           {label}
         </Text>
+        {icon && iconPosition === 'right' ? (
+          <Box marginLeft="s" alignItems="center" justifyContent="center">
+            {icon}
+          </Box>
+        ) : null}
       </Box>
     </TouchableOpacity>
   );

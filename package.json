@@ -9,13 +9,14 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.0.0",
     "@react-native-community/datetimepicker": "^8.1.1",
     "@shopify/restyle": "^2.4.5",
     "expo": "54.0.29",
     "expo-status-bar": "~3.0.9",
+    "lucide-react-native": "^0.562.0",
     "react": "19.1.0",
     "react-native": "0.81.5",
-    "@react-native-async-storage/async-storage": "^2.0.0",
     "react-native-draglist": "^3.10.0",
     "react-native-safe-area-context": "^5.6.2"
   },

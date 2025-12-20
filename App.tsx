@@ -13,6 +13,7 @@ import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
+import { Plus, Sun, Moon } from 'lucide-react-native';
 
 type ZoneGroup = {
   label: string;
@@ -366,7 +367,7 @@ export default function App() {
               alignItems="center"
               marginBottom="l"
             >
-              <Text variant="heading2">Time by Time Zone</Text>
+              <Text variant="heading2">Team Zones</Text>
               <Box flexDirection="row" alignItems="center">
                 <Pressable
                   onPress={() => setMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
@@ -376,15 +377,21 @@ export default function App() {
                   })}
                 >
                   <Box
+                    width={36}
+                    height={36}
                     paddingHorizontal="sPlus"
                     paddingVertical="xsPlus"
-                    borderRadius="m"
+                    borderRadius="xl"
                     backgroundColor="primarySoft"
                     borderWidth={1}
                     borderColor="borderSubtle"
                   >
                     <Text variant="caption" color="textSecondary">
-                      {isDark ? 'Dark' : 'Light'} mode
+                      {isDark ? (
+                        <Moon color={theme.colors.text} />
+                      ) : (
+                        <Sun color={theme.colors.text} />
+                      )}
                     </Text>
                   </Box>
                 </Pressable>
@@ -406,7 +413,7 @@ export default function App() {
                       justifyContent="center"
                     >
                       <Text variant="heading2" color="textInverse" style={{ fontSize: 20 }}>
-                        +
+                        <Plus color={theme.colors.textInverse} />
                       </Text>
                     </Box>
                   </Pressable>
@@ -429,6 +436,7 @@ export default function App() {
                 <Box marginTop="sPlus">
                   <Button
                     label="Add a time zone"
+                    icon={<Plus size={18} color={theme.colors.textInverse} />}
                     onPress={() => {
                       setDraftIndex(null);
                       setActionIndex(null);

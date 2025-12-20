@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ThemeProvider } from '@shopify/restyle';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -22,14 +23,6 @@ type ZoneGroup = {
 type DayBadgeTag = 'yday' | 'today' | 'tomo';
 
 const AnimatedBox = Animated.createAnimatedComponent(Box);
-
-const INITIAL_ZONES: ZoneGroup[] = [
-  { label: 'New York', timeZone: 'America/New_York', members: ['Alice'] },
-  { label: 'London', timeZone: 'Europe/London', members: ['Bala', 'Priya'] },
-  { label: 'Singapore', timeZone: 'Asia/Singapore', members: ['Chen'] },
-  { label: 'Sydney', timeZone: 'Australia/Sydney', members: ['Daria'] },
-  { label: 'Los Angeles', timeZone: 'America/Los_Angeles' },
-];
 
 const timeFormatter = (tz: string) =>
   new Intl.DateTimeFormat('en-US', {
@@ -58,12 +51,14 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
 }
 
 export default function App() {
+  const STORAGE_KEY = 'teamzones:zones:v1';
   const [mode, setMode] = useState<'light' | 'dark'>('dark');
   const theme: AppTheme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
   const isDark = mode === 'dark';
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const [zones, setZones] = useState<ZoneGroup[]>(INITIAL_ZONES);
+  const [zones, setZones] = useState<ZoneGroup[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -81,6 +76,31 @@ export default function App() {
     const id = setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => clearInterval(id);
   }, [paused]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            setZones(parsed as ZoneGroup[]);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load saved zones', err);
+      } finally {
+        setHydrated(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(zones)).catch((err) => {
+      console.warn('Failed to save zones', err);
+    });
+  }, [zones, hydrated]);
 
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 

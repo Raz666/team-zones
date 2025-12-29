@@ -18,7 +18,11 @@ type PrivacyPolicyModalProps = {
   themeMode?: 'light' | 'dark';
 };
 
-export function PrivacyPolicyModal({ visible, onClose, themeMode = 'light' }: PrivacyPolicyModalProps) {
+export function PrivacyPolicyModal({
+  visible,
+  onClose,
+  themeMode = 'light',
+}: PrivacyPolicyModalProps) {
   const theme = useTheme<AppTheme>();
   const injectedTheme = `
     (function() {
@@ -56,10 +60,7 @@ export function PrivacyPolicyModal({ visible, onClose, themeMode = 'light' }: Pr
             <Text variant="heading2" color="textSecondary">
               Privacy Policy
             </Text>
-            <Pressable
-              onPress={onClose}
-              style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
-            >
+            <Pressable onPress={onClose} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
               <Box
                 width={36}
                 height={36}

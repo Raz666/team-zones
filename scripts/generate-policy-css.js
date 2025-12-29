@@ -36,9 +36,7 @@ function loadTsModule(filePath) {
 function cssVars(name, theme) {
   const c = theme.colors;
   const shadow =
-    name === 'dark'
-      ? '0 14px 40px rgba(0,0,0,0.28)'
-      : '0 14px 40px rgba(17,34,68,0.08)';
+    name === 'dark' ? '0 14px 40px rgba(0,0,0,0.28)' : '0 14px 40px rgba(17,34,68,0.08)';
 
   return `:root[data-theme='${name}'] {
   --bg: ${c.background};
@@ -73,7 +71,6 @@ body {
   color: var(--text);
 }
 .page {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,7 +86,7 @@ body {
 }
 header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 18px;
   gap: 12px;
@@ -117,6 +114,14 @@ ul {
 li {
   margin-bottom: 6px;
   color: var(--text-secondary);
+}
+.header-wrap{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  white-space: nowrap;
 }
 .meta {
   display: inline-flex;
@@ -151,14 +156,6 @@ li {
 .toggle:active {
   transform: translateY(0);
   opacity: 0.92;
-}
-.pill {
-  padding: 4px 10px;
-  border-radius: 10px;
-  background: var(--primary);
-  color: #fff;
-  font-size: 12px;
-  letter-spacing: 0.3px;
 }
 footer {
   margin-top: 26px;

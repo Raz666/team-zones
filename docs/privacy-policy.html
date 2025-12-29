@@ -10,20 +10,19 @@
     <div class="page">
       <main class="card">
         <header>
-          <div>
-            <div class="pill">Team Zones</div>
-            <h1>Privacy Policy</h1>
+          <div class="header-wrap">
+            <div>
+              <h1>Privacy Policy</h1>
+            </div>
+            <div class="meta">
+              <strong>Effective date:</strong>
+              <span>2025/12/29</span>
+            </div>
           </div>
           <button class="toggle" type="button" id="theme-toggle" aria-label="Toggle theme">
-            <span id="theme-icon" aria-hidden="true">L</span>
             <span id="theme-label">Light</span>
           </button>
         </header>
-
-        <div class="meta">
-          <strong>Effective date:</strong>
-          <span>2025/12/29</span>
-        </div>
 
         <p>
           Team Zones respects your privacy. The app does not collect, store, transmit, or share any
@@ -57,7 +56,7 @@
         <p>
           If you have any questions about this privacy policy, you can contact the developer at:
           <br />
-          <strong><a href="mailto:raz+team-zones@razart.pl">raz+team-zones@razart.pl</a></strong>
+          <strong><a id="contact-email" rel="nofollow noopener">Loading…</a></strong>
         </p>
 
         <footer>&copy; Team Zones</footer>
@@ -72,13 +71,11 @@
         const body = document.documentElement;
         const toggle = document.getElementById('theme-toggle');
         const label = document.getElementById('theme-label');
-        const icon = document.getElementById('theme-icon');
 
         function apply(theme) {
           body.setAttribute('data-theme', theme);
           body.style.colorScheme = theme;
           label.textContent = theme === 'dark' ? 'Dark' : 'Light';
-          icon.textContent = theme === 'dark' ? 'D' : 'L';
         }
 
         const initial =
@@ -90,6 +87,15 @@
           apply(next);
           localStorage.setItem('tz:policy-theme', next);
         });
+
+        const emailEl = document.getElementById('contact-email');
+        if (emailEl) {
+          const user = 'raz+team-zones';
+          const domain = 'razart.pl';
+          const address = `${user}@${domain}`;
+          emailEl.textContent = address;
+          emailEl.href = `mailto:${address}`;
+        }
       })();
     </script>
   </body>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Team Zones",
     "slug": "team-zones",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "scheme": "teamzones",
     "icon": "./assets/icon.png",
@@ -24,7 +24,7 @@
     },
     "android": {
       "package": "com.razart.teamzones",
-      "versionCode": 1,
+      "versionCode": 4,
       "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
@@ -43,6 +43,9 @@
       "eas": {
         "projectId": "759a4f4a-0848-4dd7-aaf2-9e8d8f02574e"
       }
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

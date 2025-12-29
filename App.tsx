@@ -9,11 +9,12 @@ import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 
 import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import { UserTimeBar } from './UserTimeBar';
+import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
-import { Plus, Sun, Moon } from 'lucide-react-native';
+import { FileText, Plus, Sun, Moon } from 'lucide-react-native';
 
 type ZoneGroup = {
   label: string;
@@ -63,6 +64,7 @@ export default function App() {
   const [showForm, setShowForm] = useState(false);
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
@@ -370,6 +372,30 @@ export default function App() {
               <Text variant="heading2">Team Zones</Text>
               <Box flexDirection="row" alignItems="center">
                 <Pressable
+                  onPress={() => setShowPrivacyPolicy(true)}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.85 : 1,
+                    marginRight: theme.spacing.s,
+                  })}
+                >
+                  <Box
+                    paddingHorizontal="m"
+                    paddingVertical="s"
+                    borderRadius="xl"
+                    borderWidth={1}
+                    borderColor="borderSubtle"
+                    backgroundColor="backgroundAlt"
+                    flexDirection="row"
+                    alignItems="center"
+                  >
+                    <FileText color={theme.colors.text} size={18} />
+                    <Box width={theme.spacing.xs} />
+                    <Text variant="caption" color="textSecondary">
+                      Privacy
+                    </Text>
+                  </Box>
+                </Pressable>
+                <Pressable
                   onPress={() => setMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
                   style={({ pressed }) => ({
                     opacity: pressed ? 0.8 : 1,
@@ -467,6 +493,10 @@ export default function App() {
                 setDraftIndex(null);
                 longPressFlag.current = false;
               }}
+            />
+            <PrivacyPolicyModal
+              visible={showPrivacyPolicy}
+              onClose={() => setShowPrivacyPolicy(false)}
             />
             <UserTimeBar
               time={currentTime}

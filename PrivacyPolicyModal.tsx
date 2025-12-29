@@ -4,19 +4,35 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '@shopify/restyle';
 import { X } from 'lucide-react-native';
+import { Asset } from 'expo-asset';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Text } from './src/theme/components';
 
 const privacyPolicyHtml = require('./docs/privacy-policy.html');
+const privacyPolicyCss = Asset.fromModule(require('./docs/styles.css')).uri;
 
 type PrivacyPolicyModalProps = {
   visible: boolean;
   onClose: () => void;
+  themeMode?: 'light' | 'dark';
 };
 
-export function PrivacyPolicyModal({ visible, onClose }: PrivacyPolicyModalProps) {
+export function PrivacyPolicyModal({ visible, onClose, themeMode = 'light' }: PrivacyPolicyModalProps) {
   const theme = useTheme<AppTheme>();
+  const injectedTheme = `
+    (function() {
+      try {
+        var theme = '${themeMode}';
+        var root = document.documentElement;
+        root.setAttribute('data-theme', theme);
+        root.style.colorScheme = theme;
+        localStorage.setItem('tz:policy-theme', theme);
+        var link = document.querySelector("link[rel='stylesheet']");
+        if (link) { link.href = '${privacyPolicyCss}'; }
+      } catch (e) {}
+    })();
+  `;
 
   return (
     <Modal
@@ -64,6 +80,7 @@ export function PrivacyPolicyModal({ visible, onClose }: PrivacyPolicyModalProps
             source={privacyPolicyHtml}
             style={{ flex: 1, backgroundColor: theme.colors.background }}
             startInLoadingState
+            injectedJavaScriptBeforeContentLoaded={injectedTheme}
           />
         </Box>
       </SafeAreaView>

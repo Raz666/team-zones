@@ -496,6 +496,7 @@ export default function App() {
             />
             <PrivacyPolicyModal
               visible={showPrivacyPolicy}
+              themeMode={mode}
               onClose={() => setShowPrivacyPolicy(false)}
             />
             <UserTimeBar

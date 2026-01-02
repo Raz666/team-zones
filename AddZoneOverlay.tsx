@@ -148,6 +148,7 @@ export function AddZoneOverlay({
       bottom={0}
       justifyContent="flex-start"
       pointerEvents="box-none"
+      zIndex={3}
     >
       <Pressable
         style={{

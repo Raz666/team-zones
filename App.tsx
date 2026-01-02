@@ -14,7 +14,7 @@ import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
-import { FileText, Plus, Sun, Moon } from 'lucide-react-native';
+import { FileText, Plus, Sun, Moon, MoreVertical } from 'lucide-react-native';
 
 type ZoneGroup = {
   label: string;
@@ -65,6 +65,7 @@ export default function App() {
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
@@ -112,6 +113,46 @@ export default function App() {
       zones.filter((_, idx) => draftIndex === null || idx !== draftIndex).map((z) => z.timeZone),
     [zones, draftIndex],
   );
+
+  const openAddZone = () => {
+    setDraftIndex(null);
+    setActionIndex(null);
+    setShowForm(true);
+  };
+
+  const toggleTheme = () => {
+    setMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const menuItems = [
+    {
+      label: 'Add new zone',
+      icon: <Plus size={20} color={theme.colors.text} />,
+      onPress: () => {
+        setShowMenu(false);
+        openAddZone();
+      },
+    },
+    {
+      label: isDark ? 'Light theme' : 'Dark theme',
+      icon: isDark ? (
+        <Sun size={20} color={theme.colors.text} />
+      ) : (
+        <Moon size={20} color={theme.colors.text} />
+      ),
+      onPress: () => {
+        toggleTheme();
+      },
+    },
+    {
+      label: 'Privacy policy',
+      icon: <FileText size={20} color={theme.colors.text} />,
+      onPress: () => {
+        setShowMenu(false);
+        setShowPrivacyPolicy(true);
+      },
+    },
+  ];
 
   function submitZone(zone: ZoneDraft) {
     setZones((prev) => {
@@ -282,7 +323,9 @@ export default function App() {
                 borderRadius="s"
                 backgroundColor={badgeColor(info.dayBadge)}
               >
-                <Text variant="label">{info.weekday}</Text>
+                <Text variant="label" color="textInverse">
+                  {info.weekday}
+                </Text>
               </Box>
             </Box>
             <Box
@@ -361,91 +404,95 @@ export default function App() {
             backgroundColor="background"
             paddingHorizontal="l"
             paddingTop="4xl"
-            paddingBottom="6xl"
+            paddingBottom="8xl"
           >
+            {showMenu ? (
+              <Pressable
+                onPress={() => setShowMenu(false)}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 1,
+                }}
+              />
+            ) : null}
             <Box
               flexDirection="row"
               justifyContent="space-between"
               alignItems="center"
               marginBottom="l"
+              style={{ zIndex: 2, position: 'relative' }}
             >
               <Text variant="heading2">Team Zones</Text>
               <Box flexDirection="row" alignItems="center">
-                <Pressable
-                  onPress={() => setShowPrivacyPolicy(true)}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.85 : 1,
-                    marginRight: theme.spacing.s,
-                  })}
-                >
-                  <Box
-                    paddingHorizontal="m"
-                    paddingVertical="s"
-                    borderRadius="xl"
-                    borderWidth={1}
-                    borderColor="borderSubtle"
-                    backgroundColor="backgroundAlt"
-                    flexDirection="row"
-                    alignItems="center"
-                  >
-                    <FileText color={theme.colors.text} size={18} />
-                    <Box width={theme.spacing.xs} />
-                    <Text variant="caption" color="textSecondary">
-                      Privacy
-                    </Text>
-                  </Box>
-                </Pressable>
-                <Pressable
-                  onPress={() => setMode((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-                  style={({ pressed }) => ({
-                    opacity: pressed ? 0.8 : 1,
-                    marginRight: theme.spacing.s,
-                  })}
-                >
-                  <Box
-                    width={36}
-                    height={36}
-                    paddingHorizontal="sPlus"
-                    paddingVertical="xsPlus"
-                    borderRadius="xl"
-                    backgroundColor="primarySoft"
-                    borderWidth={1}
-                    borderColor="borderSubtle"
-                  >
-                    <Text variant="caption" color="textSecondary">
-                      {isDark ? (
-                        <Moon color={theme.colors.text} />
-                      ) : (
-                        <Sun color={theme.colors.text} />
-                      )}
-                    </Text>
-                  </Box>
-                </Pressable>
-                {zones.length > 0 ? (
+                <Box style={{ position: 'relative' }}>
                   <Pressable
-                    onPress={() => {
-                      setDraftIndex(null);
-                      setActionIndex(null);
-                      setShowForm(true);
-                    }}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+                    onPress={() => setShowMenu((prev) => !prev)}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.85 : 1,
+                    })}
                   >
                     <Box
                       width={36}
                       height={36}
-                      borderRadius="xl"
+                      borderRadius="m"
+                      borderWidth={1}
                       backgroundColor="primary"
                       alignItems="center"
                       justifyContent="center"
                     >
-                      <Text variant="heading2" color="textInverse" style={{ fontSize: 20 }}>
-                        <Plus color={theme.colors.textInverse} />
-                      </Text>
+                      <MoreVertical color={theme.colors.textInverse} size={18} />
                     </Box>
                   </Pressable>
-                ) : (
-                  <Box width={36} />
-                )}
+                  {showMenu ? (
+                    <Box
+                      backgroundColor="card"
+                      borderRadius="l"
+                      borderWidth={1}
+                      borderColor="borderSubtle"
+                      paddingVertical="xs"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: theme.spacing.s,
+                        minWidth: 200,
+                        zIndex: 3,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.2,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 6 },
+                        elevation: 10,
+                      }}
+                    >
+                      {menuItems.map((item, index) => (
+                        <Pressable
+                          key={item.label}
+                          onPress={item.onPress}
+                          style={({ pressed }) => ({
+                            opacity: pressed ? 0.85 : 1,
+                          })}
+                        >
+                          <Box
+                            flexDirection="row"
+                            alignItems="center"
+                            paddingHorizontal="mPlus"
+                            paddingVertical="lPlus"
+                            borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
+                            borderBottomColor="borderSubtle"
+                          >
+                            {item.icon}
+                            <Box width={theme.spacing.sPlus} />
+                            <Text variant="subtitle">{item.label}</Text>
+                          </Box>
+                        </Pressable>
+                      ))}
+                    </Box>
+                  ) : null}
+                </Box>
               </Box>
             </Box>
 
@@ -463,11 +510,7 @@ export default function App() {
                   <Button
                     label="Add a time zone"
                     icon={<Plus size={18} color={theme.colors.textInverse} />}
-                    onPress={() => {
-                      setDraftIndex(null);
-                      setActionIndex(null);
-                      setShowForm(true);
-                    }}
+                    onPress={openAddZone}
                   />
                 </Box>
               </Box>
@@ -481,6 +524,37 @@ export default function App() {
                 onHoverChanged={(index) => setHoverIndex(index)}
               />
             )}
+
+            {zones.length > 0 ? (
+              <Pressable
+                onPress={openAddZone}
+                style={({ pressed }) => ({
+                  position: 'absolute',
+                  right: theme.spacing.l,
+                  bottom: theme.spacing['7xl'],
+                  opacity: pressed ? 0.9 : 1,
+                  zIndex: 3,
+                })}
+              >
+                <Box
+                  width={52}
+                  height={52}
+                  borderRadius="xl"
+                  backgroundColor="primary"
+                  alignItems="center"
+                  justifyContent="center"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOpacity: 0.25,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 6 },
+                    elevation: 12,
+                  }}
+                >
+                  <Plus size={22} color={theme.colors.textInverse} />
+                </Box>
+              </Pressable>
+            ) : null}
 
             <AddZoneOverlay
               visible={showForm}

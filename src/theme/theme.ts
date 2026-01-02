@@ -16,6 +16,8 @@ export const spacing = {
   '4xl': 48,
   '5xl': 68,
   '6xl': 96,
+  '7xl': 132,
+  '8xl': 168,
 };
 
 export const radii = {

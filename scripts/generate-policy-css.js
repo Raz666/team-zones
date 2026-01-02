@@ -115,24 +115,12 @@ li {
   margin-bottom: 6px;
   color: var(--text-secondary);
 }
-.header-wrap{
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  white-space: nowrap;
-}
 .meta {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   color: var(--muted);
-  background: var(--bg-alt);
-  padding: 8px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--card-border);
 }
 .toggle {
   display: inline-flex;
@@ -174,6 +162,37 @@ a:hover {
   return cssVars('light', lightTheme) + cssVars('dark', darkTheme) + baseStyles;
 }
 
+function indentLines(text, indent) {
+  return text
+    .split('\n')
+    .map((line) => (line.length ? `${indent}${line}` : line))
+    .join('\n');
+}
+
+function writeCssIntoHtml(htmlPath, css) {
+  const html = fs.readFileSync(htmlPath, 'utf8');
+  const styleTag = `  <style id="policy-styles">\n${indentLines(
+    css.trim(),
+    '    ',
+  )}\n  </style>`;
+
+  let updated = html;
+  if (html.includes('id="policy-styles"')) {
+    updated = html.replace(
+      /<style id="policy-styles">[\s\S]*?<\/style>/,
+      styleTag,
+    );
+  } else if (html.includes('rel="stylesheet"')) {
+    updated = html.replace(/<link[^>]*rel="stylesheet"[^>]*>/, styleTag);
+  } else if (html.includes('</head>')) {
+    updated = html.replace('</head>', `${styleTag}\n  </head>`);
+  }
+
+  if (updated !== html) {
+    fs.writeFileSync(htmlPath, updated, 'utf8');
+  }
+}
+
 function main() {
   const { lightTheme, darkTheme } = loadTsModule(
     path.join(__dirname, '..', 'src', 'theme', 'themes.ts'),
@@ -184,9 +203,9 @@ function main() {
   }
 
   const css = buildCss(lightTheme, darkTheme);
-  const outPath = path.join(__dirname, '..', 'docs', 'styles.css');
-  fs.writeFileSync(outPath, css, 'utf8');
-  console.log(`Wrote policy styles to ${outPath}`);
+  const htmlPath = path.join(__dirname, '..', 'docs', 'privacy-policy.html');
+  writeCssIntoHtml(htmlPath, css);
+  console.log(`Inlined policy styles into ${htmlPath}`);
 }
 
 main();

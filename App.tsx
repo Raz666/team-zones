@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable } from 'react-native';
+import { Animated, BackHandler, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -70,9 +70,12 @@ export default function App() {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
   const [draftIndex, setDraftIndex] = useState<number | null>(null);
+  const [exitArmed, setExitArmed] = useState(false);
   const longPressFlag = useRef(false);
   const actionAnimRefs = useRef<Record<number, Animated.Value>>({});
   const actionVisibility = useRef<Record<number, boolean>>({});
+  const exitArmedRef = useRef(false);
+  const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (paused) return;
@@ -106,6 +109,53 @@ export default function App() {
     });
   }, [zones, hydrated]);
 
+  useEffect(() => {
+    if (showForm || showPrivacyPolicy) {
+      if (exitTimeoutRef.current) {
+        clearTimeout(exitTimeoutRef.current);
+        exitTimeoutRef.current = null;
+      }
+      exitArmedRef.current = false;
+      setExitArmed(false);
+    }
+  }, [showForm, showPrivacyPolicy]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (showForm || showPrivacyPolicy) {
+        return false;
+      }
+      if (showMenu) {
+        setShowMenu(false);
+        return true;
+      }
+      if (exitArmedRef.current) {
+        BackHandler.exitApp();
+        return true;
+      }
+      exitArmedRef.current = true;
+      setExitArmed(true);
+      if (exitTimeoutRef.current) {
+        clearTimeout(exitTimeoutRef.current);
+      }
+      exitTimeoutRef.current = setTimeout(() => {
+        exitArmedRef.current = false;
+        setExitArmed(false);
+        exitTimeoutRef.current = null;
+      }, 2000);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [showForm, showPrivacyPolicy, showMenu]);
+
+  useEffect(() => {
+    return () => {
+      if (exitTimeoutRef.current) {
+        clearTimeout(exitTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   const usedTimeZones = useMemo(
@@ -115,6 +165,7 @@ export default function App() {
   );
 
   const openAddZone = () => {
+    setShowMenu(false);
     setDraftIndex(null);
     setActionIndex(null);
     setShowForm(true);
@@ -529,6 +580,37 @@ export default function App() {
                   elevation: 12,
                 }}
               />
+            ) : null}
+            {exitArmed ? (
+              <Box
+                position="absolute"
+                left={theme.spacing.l}
+                right={theme.spacing.l}
+                bottom={theme.spacing['6xl']}
+                zIndex={2}
+                pointerEvents="none"
+                alignItems="center"
+              >
+                <Box
+                  paddingHorizontal="m"
+                  paddingVertical="sPlus"
+                  borderRadius="l"
+                  backgroundColor="card"
+                  borderWidth={1}
+                  borderColor="borderSubtle"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 6,
+                  }}
+                >
+                  <Text variant="caption" color="textSecondary">
+                    {"Press the 'Back' button to exit."}
+                  </Text>
+                </Box>
+              </Box>
             ) : null}
 
             <AddZoneOverlay

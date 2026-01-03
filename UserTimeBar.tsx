@@ -3,7 +3,7 @@ import { Pressable } from 'react-native';
 import { useTheme } from '@shopify/restyle';
 
 import type { AppTheme } from './src/theme/themes';
-import { Box, Text } from './src/theme/components';
+import { Box, Button, Text } from './src/theme/components';
 import { Clock8, History } from 'lucide-react-native';
 
 type UserTimeBarProps = {
@@ -52,29 +52,16 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
       </Box>
 
       <Box flexDirection="row" justifyContent="space-between" alignItems="center" width="100%">
-        <Pressable
-          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+        <Button
+          label="Reset"
+          variant="ghost"
           onPress={handleReset}
           disabled={resetDisabled}
-        >
-          <Box
-            paddingVertical="sPlus"
-            paddingHorizontal="m"
-            borderRadius="l"
-            borderWidth={1}
-            borderColor="borderSubtle"
-            backgroundColor="transparent"
-            alignItems="center"
-          >
-            <Box flexDirection="row" alignItems="center">
-              <History size={14} color={resetDisabled ? theme.colors.muted : theme.colors.text} />
-              <Box width={theme.spacing.s} />
-              <Text variant="buttonLabel" color={resetDisabled ? 'muted' : 'text'}>
-                {'Reset'}
-              </Text>
-            </Box>
-          </Box>
-        </Pressable>
+          disabledOpacity={1}
+          size="sm"
+          labelColor={resetDisabled ? 'muted' : 'text'}
+          icon={<History size={14} color={resetDisabled ? theme.colors.muted : theme.colors.text} />}
+        />
 
         <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })} onPress={handleSet}>
           <Box flex={1} alignItems="center">
@@ -84,24 +71,16 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
           </Box>
         </Pressable>
 
-        <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })} onPress={handleSet}>
-          <Box
-            marginLeft="lPlus"
-            paddingVertical="sPlus"
-            paddingHorizontal="m"
-            borderRadius="l"
-            backgroundColor="primary"
-            borderWidth={1}
-            borderColor="primary"
-            alignItems="center"
-          >
-            <Box flexDirection="row" alignItems="center">
-              <Clock8 size={14} color={theme.colors.textInverse} />
-              <Box width={theme.spacing.s} />
-              <Text variant="buttonLabel">{'Set'}</Text>
-            </Box>
-          </Box>
-        </Pressable>
+        <Button
+          label="Set"
+          onPress={handleSet}
+          variant="primary"
+          size="sm"
+          borderWidth={1}
+          borderColor="primary"
+          icon={<Clock8 size={14} color={theme.colors.textInverse} />}
+          containerStyle={{ marginLeft: theme.spacing.lPlus }}
+        />
       </Box>
     </Box>
   );

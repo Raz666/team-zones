@@ -356,47 +356,26 @@ export default function App() {
             justifyContent="space-between"
             marginTop="xsPlus"
           >
-            <Pressable
+            <Button
+              label="Delete"
+              variant="ghost"
+              size="xs"
+              labelVariant="body"
               onPress={handleDelete}
-              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, flex: 1 })}
-            >
-              <Box
-                paddingVertical="s"
-                paddingHorizontal="m"
-                borderRadius="s"
-                borderWidth={1}
-                borderColor="borderSubtle"
-                backgroundColor="transparent"
-                alignItems="center"
-              >
-                <Box flexDirection="row" alignItems="center">
-                  <Trash2 size={14} color={theme.colors.text} />
-                  <Box width={theme.spacing.s} />
-                  <Text variant="body">{'Delete'}</Text>
-                </Box>
-              </Box>
-            </Pressable>
+              icon={<Trash2 size={14} color={theme.colors.text} />}
+              containerStyle={{ flex: 1 }}
+            />
             <Box width={theme.spacing.s} />
-            <Pressable
+            <Button
+              label="Edit"
+              variant="primary"
+              size="xs"
               onPress={handleEdit}
-              style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, flex: 1 })}
-            >
-              <Box
-                paddingVertical="s"
-                paddingHorizontal="m"
-                borderRadius="s"
-                backgroundColor="primary"
-                borderWidth={1}
-                borderColor="primary"
-                alignItems="center"
-              >
-                <Box flexDirection="row" alignItems="center">
-                  <Edit size={14} color={theme.colors.textInverse} />
-                  <Box width={theme.spacing.s} />
-                  <Text variant="buttonLabel">{'Edit'}</Text>
-                </Box>
-              </Box>
-            </Pressable>
+              icon={<Edit size={14} color={theme.colors.textInverse} />}
+              borderWidth={1}
+              borderColor="primary"
+              containerStyle={{ flex: 1 }}
+            />
           </AnimatedBox>
         ) : null}
       </Box>
@@ -438,25 +417,17 @@ export default function App() {
               <Text variant="heading2">Team Zones</Text>
               <Box flexDirection="row" alignItems="center">
                 <Box style={{ position: 'relative' }}>
-                  <Pressable
+                  <Button
+                    iconOnly
+                    accessibilityLabel="Toggle menu"
                     onPress={() => setShowMenu((prev) => !prev)}
-                    style={({ pressed }) => ({
-                      opacity: pressed ? 0.85 : 1,
-                    })}
-                  >
-                    <Box
-                      width={36}
-                      height={36}
-                      borderRadius="m"
-                      borderWidth={1}
-                      backgroundColor="primary"
-                      borderColor="primary"
-                      alignItems="center"
-                      justifyContent="center"
-                    >
-                      <Menu color={theme.colors.textInverse} size={18} />
-                    </Box>
-                  </Pressable>
+                    variant="primary"
+                    size="sm"
+                    radius="m"
+                    borderWidth={1}
+                    borderColor="primary"
+                    icon={<Menu color={theme.colors.textInverse} size={18} />}
+                  />
                   {showMenu ? (
                     <Box
                       backgroundColor="card"
@@ -536,34 +507,28 @@ export default function App() {
             )}
 
             {zones.length > 0 ? (
-              <Pressable
+              <Button
+                iconOnly
+                accessibilityLabel="Add time zone"
                 onPress={openAddZone}
-                style={({ pressed }) => ({
+                variant="primary"
+                radius="xl"
+                iconOnlySize={52}
+                icon={<Plus size={22} color={theme.colors.textInverse} />}
+                containerStyle={{
                   position: 'absolute',
                   right: theme.spacing.l,
                   bottom: theme.spacing['7xl'],
-                  opacity: pressed ? 0.9 : 1,
                   zIndex: 3,
-                })}
-              >
-                <Box
-                  width={52}
-                  height={52}
-                  borderRadius="xl"
-                  backgroundColor="primary"
-                  alignItems="center"
-                  justifyContent="center"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOpacity: 0.25,
-                    shadowRadius: 10,
-                    shadowOffset: { width: 0, height: 6 },
-                    elevation: 12,
-                  }}
-                >
-                  <Plus size={22} color={theme.colors.textInverse} />
-                </Box>
-              </Pressable>
+                }}
+                contentStyle={{
+                  shadowColor: '#000',
+                  shadowOpacity: 0.25,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 12,
+                }}
+              />
             ) : null}
 
             <AddZoneOverlay

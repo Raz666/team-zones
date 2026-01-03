@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable } from 'react-native';
+import { ActivityIndicator, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '@shopify/restyle';
@@ -7,7 +7,7 @@ import { X } from 'lucide-react-native';
 import { Asset } from 'expo-asset';
 
 import type { AppTheme } from './src/theme/themes';
-import { Box, Text } from './src/theme/components';
+import { Box, Button, Text } from './src/theme/components';
 
 const privacyPolicyHtmlModule = require('./docs/privacy-policy.html');
 const privacyPolicyHtml = Asset.fromModule(privacyPolicyHtmlModule);
@@ -91,20 +91,17 @@ export function PrivacyPolicyModal({
             <Text variant="heading2" color="textSecondary">
               Privacy Policy
             </Text>
-            <Pressable onPress={onClose} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}>
-              <Box
-                width={36}
-                height={36}
-                borderRadius="xl"
-                borderWidth={1}
-                borderColor="borderSubtle"
-                alignItems="center"
-                justifyContent="center"
-                backgroundColor="card"
-              >
-                <X color={theme.colors.text} />
-              </Box>
-            </Pressable>
+            <Button
+              iconOnly
+              accessibilityLabel="Close privacy policy"
+              onPress={onClose}
+              iconOnlySize={36}
+              radius="xl"
+              borderWidth={1}
+              borderColor="borderSubtle"
+              backgroundColor="card"
+              icon={<X color={theme.colors.text} />}
+            />
           </Box>
 
           <WebView

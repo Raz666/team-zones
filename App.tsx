@@ -10,7 +10,7 @@ import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import { UserTimeBar } from './UserTimeBar';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
-import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
+import { dayTagForZone, normalizeTimeZoneId, weekdayInZone } from './timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
@@ -31,7 +31,7 @@ const timeFormatter = (tz: string) =>
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-    timeZone: tz,
+    timeZone: normalizeTimeZoneId(tz),
   });
 
 function formatZone(now: Date, zone: ZoneGroup, deviceTimeZone: string) {
@@ -160,7 +160,9 @@ export default function App() {
 
   const usedTimeZones = useMemo(
     () =>
-      zones.filter((_, idx) => draftIndex === null || idx !== draftIndex).map((z) => z.timeZone),
+      zones
+        .filter((_, idx) => draftIndex === null || idx !== draftIndex)
+        .map((z) => normalizeTimeZoneId(z.timeZone)),
     [zones, draftIndex],
   );
 

@@ -1,11 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, FlatList, Pressable, TextInput } from 'react-native';
+import { BackHandler, FlatList, Pressable, TextInput, View } from 'react-native';
 import { useTheme } from '@shopify/restyle';
 import { X } from 'lucide-react-native';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
+import { formatTimeInZone, formatUtcOffsetLabel, getTimeZoneOption } from './timeZoneDisplay';
+import type { TimeZoneOption } from './timeZoneDisplay';
 import { IANA_TIMEZONES } from './timezones';
+import { normalizeTimeZoneId } from './timeZoneUtils';
 
 export type ZoneDraft = {
   label: string;
@@ -38,6 +41,14 @@ export function AddZoneOverlay({
   const [error, setError] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
+  const searchAnchorRef = useRef<View>(null);
+  const overlayRef = useRef<View>(null);
+  const [dropdownAnchor, setDropdownAnchor] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const isEdit = mode === 'edit' || Boolean(initialValue);
 
   const allTimeZones: string[] = useMemo(() => {
@@ -50,22 +61,39 @@ export function AddZoneOverlay({
     return Array.from(new Set(base)).sort();
   }, []);
 
-  const availableOptions: string[] = useMemo(() => {
+  const allTimeZoneOptions = useMemo(
+    () => allTimeZones.map((tz) => getTimeZoneOption(tz)),
+    [allTimeZones],
+  );
+
+  const normalizedInitialTimeZone = useMemo(
+    () => (initialValue ? normalizeTimeZoneId(initialValue.timeZone) : ''),
+    [initialValue],
+  );
+
+  const usedTimeZoneSet = useMemo(
+    () => new Set(usedTimeZones.map((tz) => normalizeTimeZoneId(tz))),
+    [usedTimeZones],
+  );
+
+  const availableOptions = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const unused = allTimeZones.filter(
-      (tz) => !usedTimeZones.includes(tz) || tz === initialValue?.timeZone,
+    const unused = allTimeZoneOptions.filter(
+      (option) => !usedTimeZoneSet.has(option.id) || option.id === normalizedInitialTimeZone,
     );
     if (!term) return unused;
-    return unused.filter((tz) => tz.toLowerCase().includes(term));
-  }, [allTimeZones, search, usedTimeZones, initialValue]);
+    return unused.filter((option) => option.searchText.includes(term));
+  }, [allTimeZoneOptions, normalizedInitialTimeZone, search, usedTimeZoneSet]);
 
   useEffect(() => {
     if (!visible) return;
     if (initialValue) {
+      const normalized = normalizeTimeZoneId(initialValue.timeZone);
+      const option = getTimeZoneOption(normalized);
       setLabel(initialValue.label);
-      setTimeZone(initialValue.timeZone);
+      setTimeZone(option.id);
       setMembersInput(initialValue.members?.join(', ') ?? '');
-      setSearch(initialValue.timeZone);
+      setSearch(option.label);
       setError('');
       setIsSearchFocused(false);
       return;
@@ -88,7 +116,7 @@ export function AddZoneOverlay({
 
   const handleSubmit = () => {
     const trimmedLabel = label.trim();
-    const trimmedTimeZone = timeZone.trim();
+    const trimmedTimeZone = normalizeTimeZoneId(timeZone.trim());
     if (!trimmedLabel || !trimmedTimeZone) {
       setError('Select a time zone and provide a label.');
       return;
@@ -127,11 +155,10 @@ export function AddZoneOverlay({
     return () => subscription.remove();
   }, [handleCancel, visible]);
 
-  const handleSelectTz = (tz: string) => {
-    setTimeZone(tz);
-    const city = tz.split('/').pop() || tz;
-    setLabel((prev) => (prev.trim() ? prev : city.replace(/_/g, ' ')));
-    setSearch(tz);
+  const handleSelectTz = (option: TimeZoneOption) => {
+    setTimeZone(option.id);
+    setLabel((prev) => (prev.trim() ? prev : option.city));
+    setSearch(option.label);
     setError('');
     setIsSearchFocused(false);
   };
@@ -158,6 +185,33 @@ export function AddZoneOverlay({
     fontSize: 14,
   };
 
+  const now = useMemo(() => new Date(), [isSearchFocused, search]);
+  const dropdownRowHeight = 56;
+  const dropdownMaxHeight = 200;
+  const dropdownCount = Math.min(availableOptions.length, 20);
+  const dropdownHeight = Math.min(
+    Math.max(dropdownCount, 1) * dropdownRowHeight,
+    dropdownMaxHeight,
+  );
+
+  const updateDropdownAnchor = () => {
+    const overlayNode = overlayRef.current;
+    const anchorNode = searchAnchorRef.current;
+    if (!overlayNode || !anchorNode) return;
+    anchorNode.measureLayout(
+      overlayNode,
+      (x, y, width, height) => {
+        setDropdownAnchor({
+          x,
+          y,
+          width,
+          height,
+        });
+      },
+      () => {},
+    );
+  };
+
   if (!visible) {
     return null;
   }
@@ -172,6 +226,7 @@ export function AddZoneOverlay({
       justifyContent="flex-start"
       pointerEvents="box-none"
       zIndex={3}
+      ref={overlayRef}
     >
       <Pressable
         style={{
@@ -181,6 +236,7 @@ export function AddZoneOverlay({
           left: 0,
           right: 0,
         }}
+        onPress={() => setIsSearchFocused(false)}
       >
         <Box flex={1} backgroundColor="overlay" />
       </Pressable>
@@ -201,7 +257,11 @@ export function AddZoneOverlay({
           {headingText}
         </Text>
         <Box style={{ position: 'relative', zIndex: 2, marginTop: theme.spacing.xsPlus }}>
-          <Box style={{ position: 'relative' }}>
+          <Box
+            style={{ position: 'relative' }}
+            ref={searchAnchorRef}
+            onLayout={updateDropdownAnchor}
+          >
             <TextInput
               ref={searchInputRef}
               style={[
@@ -223,8 +283,10 @@ export function AddZoneOverlay({
                 setError('');
                 setIsSearchFocused(true);
               }}
-              onFocus={() => setIsSearchFocused(true)}
-              onBlur={() => setIsSearchFocused(false)}
+              onFocus={() => {
+                setIsSearchFocused(true);
+                updateDropdownAnchor();
+              }}
               placeholder="Search time zone id (e.g., Europe/Paris)"
               placeholderTextColor={theme.colors.muted}
               autoCapitalize="none"
@@ -253,50 +315,6 @@ export function AddZoneOverlay({
               </Pressable>
             ) : null}
           </Box>
-          {isSearchFocused ? (
-            <Box
-              maxHeight={160}
-              borderWidth={1}
-              borderColor="borderSubtle"
-              borderRadius="s"
-              overflow="hidden"
-              backgroundColor="card"
-              style={{
-                position: 'absolute',
-                top: '100%',
-                left: 0,
-                right: 0,
-                zIndex: 3,
-                elevation: 6,
-                borderTopWidth: 0,
-                borderTopLeftRadius: 0,
-                borderTopRightRadius: 0,
-              }}
-            >
-              <FlatList
-                data={availableOptions.slice(0, 20)}
-                keyExtractor={(tz: string) => tz}
-                renderItem={({ item }) => (
-                  <Pressable onPress={() => handleSelectTz(item)}>
-                    <Box paddingVertical="sPlus" paddingHorizontal="m">
-                      <Text variant="body" color="textSecondary">
-                        {item}
-                      </Text>
-                    </Box>
-                  </Pressable>
-                )}
-                ListEmptyComponent={
-                  <Box padding="m">
-                    <Text variant="caption" color="muted">
-                      No unused time zones match.
-                    </Text>
-                  </Box>
-                }
-                style={{ maxHeight: 160 }}
-                keyboardShouldPersistTaps="handled"
-              />
-            </Box>
-          ) : null}
         </Box>
         <TextInput
           style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
@@ -305,6 +323,7 @@ export function AddZoneOverlay({
             setLabel(text);
             setError('');
           }}
+          onFocus={() => setIsSearchFocused(false)}
           placeholder="Label (auto-filled from city, editable)"
           placeholderTextColor={theme.colors.muted}
         />
@@ -312,6 +331,7 @@ export function AddZoneOverlay({
           style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={membersInput}
           onChangeText={setMembersInput}
+          onFocus={() => setIsSearchFocused(false)}
           placeholder="Members comma-separated (optional)"
           placeholderTextColor={theme.colors.muted}
           autoCapitalize="words"
@@ -328,6 +348,74 @@ export function AddZoneOverlay({
           <Button label={submitLabel} onPress={handleSubmit} />
         </Box>
       </Box>
+      {isSearchFocused && dropdownAnchor ? (
+        <Box
+          borderWidth={1}
+          borderColor="borderSubtle"
+          borderRadius="s"
+          overflow="hidden"
+          backgroundColor="card"
+          style={{
+            position: 'absolute',
+            top: dropdownAnchor.y + dropdownAnchor.height,
+            left: dropdownAnchor.x,
+            width: dropdownAnchor.width,
+            zIndex: 4,
+            elevation: 16,
+            borderTopWidth: 0,
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            height: dropdownHeight,
+          }}
+        >
+          <FlatList
+            data={availableOptions.slice(0, 20)}
+            keyExtractor={(item: TimeZoneOption) => item.id}
+            scrollEnabled
+            nestedScrollEnabled
+            renderItem={({ item }) => {
+              const locationLine = [item.district, item.country].filter(Boolean).join(', ');
+              const timeLabel = formatTimeInZone(item.id, now);
+              const offsetLabel = formatUtcOffsetLabel(item.id, now);
+              return (
+                <Pressable onPress={() => handleSelectTz(item)}>
+                  <Box paddingVertical="sPlus" paddingHorizontal="m">
+                    <Box flexDirection="row" alignItems="center" justifyContent="space-between">
+                      <Box flex={1} marginRight="s">
+                        <Text variant="body" color="textSecondary">
+                          {item.city}
+                        </Text>
+                        {locationLine ? (
+                          <Text variant="caption" color="muted">
+                            {locationLine}
+                          </Text>
+                        ) : null}
+                      </Box>
+                      <Box alignItems="flex-end">
+                        <Text variant="body" color="textSecondary" style={{ textAlign: 'right' }}>
+                          {timeLabel}
+                        </Text>
+                        <Text variant="caption" color="muted" style={{ textAlign: 'right' }}>
+                          {offsetLabel}
+                        </Text>
+                      </Box>
+                    </Box>
+                  </Box>
+                </Pressable>
+              );
+            }}
+            ListEmptyComponent={
+              <Box padding="m">
+                <Text variant="caption" color="muted">
+                  No unused time zones match.
+                </Text>
+              </Box>
+            }
+            style={{ height: dropdownHeight }}
+            keyboardShouldPersistTaps="handled"
+          />
+        </Box>
+      ) : null}
     </Box>
   );
 }

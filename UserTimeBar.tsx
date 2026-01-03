@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable } from 'react-native';
 import { useTheme } from '@shopify/restyle';
 
 import type { AppTheme } from './src/theme/themes';
-import { Box, Button, Text } from './src/theme/components';
+import { Box, Text } from './src/theme/components';
+import { Clock8, History } from 'lucide-react-native';
 
 type UserTimeBarProps = {
   time: Date;
@@ -13,6 +14,16 @@ type UserTimeBarProps = {
 
 export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
   const theme = useTheme<AppTheme>();
+
+  const [resetDisabled, setResetDisabled] = useState(true);
+  const handleSet = () => {
+    setResetDisabled(false);
+    onChange();
+  };
+  const handleReset = () => {
+    setResetDisabled(true);
+    onReset();
+  };
 
   return (
     <Box
@@ -41,11 +52,31 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
       </Box>
 
       <Box flexDirection="row" justifyContent="space-between" alignItems="center" width="100%">
-        <Box marginRight="m">
-          <Button label="Reset" variant="ghost" onPress={onReset} />
-        </Box>
+        <Pressable
+          style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })}
+          onPress={handleReset}
+          disabled={resetDisabled}
+        >
+          <Box
+            paddingVertical="sPlus"
+            paddingHorizontal="m"
+            borderRadius="l"
+            borderWidth={1}
+            borderColor="borderSubtle"
+            backgroundColor="transparent"
+            alignItems="center"
+          >
+            <Box flexDirection="row" alignItems="center">
+              <History size={14} color={resetDisabled ? theme.colors.muted : theme.colors.text} />
+              <Box width={theme.spacing.s} />
+              <Text variant="buttonLabel" color={resetDisabled ? 'muted' : 'text'}>
+                {'Reset'}
+              </Text>
+            </Box>
+          </Box>
+        </Pressable>
 
-        <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })} onPress={onChange}>
+        <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })} onPress={handleSet}>
           <Box flex={1} alignItems="center">
             <Text variant="time" style={{ fontSize: 38 }} color="textSecondary">
               {formatUserTime(time)}
@@ -53,9 +84,24 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
           </Box>
         </Pressable>
 
-        <Box marginRight="m">
-          <Button label="Change" variant="primary" onPress={onChange} />
-        </Box>
+        <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })} onPress={handleSet}>
+          <Box
+            marginLeft="lPlus"
+            paddingVertical="sPlus"
+            paddingHorizontal="m"
+            borderRadius="l"
+            backgroundColor="primary"
+            borderWidth={1}
+            borderColor="primary"
+            alignItems="center"
+          >
+            <Box flexDirection="row" alignItems="center">
+              <Clock8 size={14} color={theme.colors.textInverse} />
+              <Box width={theme.spacing.s} />
+              <Text variant="buttonLabel">{'Set'}</Text>
+            </Box>
+          </Box>
+        </Pressable>
       </Box>
     </Box>
   );

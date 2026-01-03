@@ -14,7 +14,7 @@ import { dayTagForZone, weekdayInZone } from './timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
-import { FileText, Plus, Sun, Moon, MoreVertical } from 'lucide-react-native';
+import { FileText, Plus, Sun, Moon, Menu, Edit, Trash2 } from 'lucide-react-native';
 
 type ZoneGroup = {
   label: string;
@@ -306,6 +306,7 @@ export default function App() {
             padding="mPlus"
             borderWidth={1}
             borderColor="borderSubtle"
+            borderStyle="solid"
             style={cardStateStyle}
           >
             <Box
@@ -368,7 +369,11 @@ export default function App() {
                 backgroundColor="transparent"
                 alignItems="center"
               >
-                <Text variant="body">Delete</Text>
+                <Box flexDirection="row" alignItems="center">
+                  <Trash2 size={14} color={theme.colors.text} />
+                  <Box width={theme.spacing.s} />
+                  <Text variant="body">{'Delete'}</Text>
+                </Box>
               </Box>
             </Pressable>
             <Box width={theme.spacing.s} />
@@ -382,10 +387,14 @@ export default function App() {
                 borderRadius="s"
                 backgroundColor="primary"
                 borderWidth={1}
-                borderColor="primaryStrong"
+                borderColor="primary"
                 alignItems="center"
               >
-                <Text variant="buttonLabel">{'Edit'}</Text>
+                <Box flexDirection="row" alignItems="center">
+                  <Edit size={14} color={theme.colors.textInverse} />
+                  <Box width={theme.spacing.s} />
+                  <Text variant="buttonLabel">{'Edit'}</Text>
+                </Box>
               </Box>
             </Pressable>
           </AnimatedBox>
@@ -403,7 +412,7 @@ export default function App() {
             flex={1}
             backgroundColor="background"
             paddingHorizontal="l"
-            paddingTop="4xl"
+            paddingTop="l"
             paddingBottom="8xl"
           >
             {showMenu ? (
@@ -441,10 +450,11 @@ export default function App() {
                       borderRadius="m"
                       borderWidth={1}
                       backgroundColor="primary"
+                      borderColor="primary"
                       alignItems="center"
                       justifyContent="center"
                     >
-                      <MoreVertical color={theme.colors.textInverse} size={18} />
+                      <Menu color={theme.colors.textInverse} size={18} />
                     </Box>
                   </Pressable>
                   {showMenu ? (

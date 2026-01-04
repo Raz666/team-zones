@@ -60,7 +60,9 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
           disabledOpacity={1}
           size="sm"
           labelColor={resetDisabled ? 'muted' : 'text'}
-          icon={<History size={14} color={resetDisabled ? theme.colors.muted : theme.colors.text} />}
+          icon={
+            <History size={14} color={resetDisabled ? theme.colors.muted : theme.colors.text} />
+          }
         />
 
         <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1 })} onPress={handleSet}>

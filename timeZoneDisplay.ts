@@ -53,11 +53,7 @@ function prettifySegment(segment: string): string {
   return segment.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function shouldIncludeRegionInLabel(
-  region?: string,
-  country?: string,
-  district?: string,
-): boolean {
+function shouldIncludeRegionInLabel(region?: string, country?: string, district?: string): boolean {
   if (!region) return false;
   if (region === 'Americas') return false;
   if (region === 'UTC') return true;

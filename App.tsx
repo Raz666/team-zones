@@ -159,10 +159,7 @@ export default function App() {
 
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
-  const usedTimeZones = useMemo(
-    () => zones.map((z) => normalizeTimeZoneId(z.timeZone)),
-    [zones],
-  );
+  const usedTimeZones = useMemo(() => zones.map((z) => normalizeTimeZoneId(z.timeZone)), [zones]);
 
   const openAddZone = () => {
     setFormOrigin('add');
@@ -210,6 +207,18 @@ export default function App() {
     setZones((prev) => {
       if (draftIndex === null) {
         return [...prev, zone];
+      }
+      return prev.map((item, idx) => (idx === draftIndex ? { ...item, ...zone } : item));
+    });
+    setShowForm(false);
+    setDraftIndex(null);
+    setActionIndex(null);
+  }
+
+  function submitZoneAtStart(zone: ZoneDraft) {
+    setZones((prev) => {
+      if (draftIndex === null) {
+        return [zone, ...prev];
       }
       return prev.map((item, idx) => (idx === draftIndex ? { ...item, ...zone } : item));
     });
@@ -631,6 +640,7 @@ export default function App() {
               }}
               startedInEdit={formOrigin === 'edit'}
               onSubmit={submitZone}
+              onSubmitAtStart={submitZoneAtStart}
               onClose={() => {
                 setShowForm(false);
                 setDraftIndex(null);

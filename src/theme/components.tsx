@@ -1,15 +1,7 @@
 import React from 'react';
-import {
-  ActivityIndicator,
-  GestureResponderEvent,
-  TouchableOpacity,
-} from 'react-native';
+import { ActivityIndicator, GestureResponderEvent, TouchableOpacity } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import {
-  createBox,
-  createText,
-  useTheme,
-} from '@shopify/restyle';
+import { createBox, createText, useTheme } from '@shopify/restyle';
 import type { AppTheme } from './themes';
 
 export const Box = createBox<AppTheme>();

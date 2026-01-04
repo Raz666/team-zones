@@ -171,17 +171,11 @@ function indentLines(text, indent) {
 
 function writeCssIntoHtml(htmlPath, css) {
   const html = fs.readFileSync(htmlPath, 'utf8');
-  const styleTag = `  <style id="policy-styles">\n${indentLines(
-    css.trim(),
-    '    ',
-  )}\n  </style>`;
+  const styleTag = `  <style id="policy-styles">\n${indentLines(css.trim(), '    ')}\n  </style>`;
 
   let updated = html;
   if (html.includes('id="policy-styles"')) {
-    updated = html.replace(
-      /<style id="policy-styles">[\s\S]*?<\/style>/,
-      styleTag,
-    );
+    updated = html.replace(/<style id="policy-styles">[\s\S]*?<\/style>/, styleTag);
   } else if (html.includes('rel="stylesheet"')) {
     updated = html.replace(/<link[^>]*rel="stylesheet"[^>]*>/, styleTag);
   } else if (html.includes('</head>')) {

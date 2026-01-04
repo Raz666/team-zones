@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, FlatList, Pressable, TextInput, View } from 'react-native';
 import { useTheme } from '@shopify/restyle';
-import { X } from 'lucide-react-native';
+import { ArrowUp, Check, Plus, X } from 'lucide-react-native';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
@@ -47,6 +47,7 @@ type AddZoneOverlayProps = {
   onReturnToAdd?: () => void;
   startedInEdit?: boolean;
   onSubmit: (zone: ZoneDraft) => void;
+  onSubmitAtStart?: (zone: ZoneDraft) => void;
   onClose: () => void;
 };
 
@@ -60,6 +61,7 @@ export function AddZoneOverlay({
   onReturnToAdd,
   startedInEdit = false,
   onSubmit,
+  onSubmitAtStart,
   onClose,
 }: AddZoneOverlayProps) {
   const theme = useTheme<AppTheme>();
@@ -156,11 +158,8 @@ export function AddZoneOverlay({
   };
 
   const getLocationLine = (option: TimeZoneOption) => {
-    const region =
-      option.region && option.region !== 'Americas' ? option.region : undefined;
-    const parts = option.district
-      ? [option.district, option.country]
-      : [option.country, region];
+    const region = option.region && option.region !== 'Americas' ? option.region : undefined;
+    const parts = option.district ? [option.district, option.country] : [option.country, region];
     const cleaned = parts.filter(Boolean) as string[];
     const deduped = cleaned.filter((piece, index) => {
       if (index === 0) return true;
@@ -189,8 +188,7 @@ export function AddZoneOverlay({
     if (initialValue) {
       const normalized = normalizeTimeZoneId(initialValue.timeZone);
       const option =
-        allTimeZoneOptions.find((item) => item.id === normalized) ??
-        getTimeZoneOption(normalized);
+        allTimeZoneOptions.find((item) => item.id === normalized) ?? getTimeZoneOption(normalized);
       setLabel(initialValue.label);
       setTimeZone(option.timeZoneId);
       setMembersInput(initialValue.members?.join(', ') ?? '');
@@ -219,7 +217,7 @@ export function AddZoneOverlay({
     setError('');
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (insertAtStart = false) => {
     const trimmedLabel = label.trim();
     const trimmedTimeZone = normalizeTimeZoneId(timeZone.trim());
     if (!trimmedLabel || !trimmedTimeZone) {
@@ -237,7 +235,9 @@ export function AddZoneOverlay({
       .map((m) => m.trim())
       .filter(Boolean);
 
-    onSubmit({
+    const submitAction = insertAtStart && !isEdit && onSubmitAtStart ? onSubmitAtStart : onSubmit;
+
+    submitAction({
       label: trimmedLabel,
       timeZone: trimmedTimeZone,
       members: members.length ? members : undefined,
@@ -490,9 +490,37 @@ export function AddZoneOverlay({
         ) : null}
         <Box flexDirection="row" justifyContent="flex-end" marginTop="s">
           <Box marginRight="m">
-            <Button label="Cancel" variant="ghost" onPress={handleCancel} />
+            <Button
+              label="Cancel"
+              size="sm"
+              variant="ghost"
+              onPress={handleCancel}
+              icon={<X size={14} color={theme.colors.text} />}
+            />
           </Box>
-          <Button label={submitLabel} onPress={handleSubmit} />
+          {!isEdit && existingZones.length > 0 ? (
+            <Box marginRight="m">
+              <Button
+                label="Add to top"
+                size="sm"
+                variant="ghost"
+                onPress={() => handleSubmit(true)}
+                icon={<ArrowUp size={14} color={theme.colors.text} />}
+              />
+            </Box>
+          ) : null}
+          <Button
+            label={submitLabel}
+            size="sm"
+            onPress={() => handleSubmit(false)}
+            icon={
+              submitLabel === 'Add' ? (
+                <Plus size={16} color={theme.colors.textInverse} />
+              ) : (
+                <Check size={16} color={theme.colors.textInverse} />
+              )
+            }
+          />
         </Box>
       </Box>
       {isSearchFocused && dropdownAnchor ? (

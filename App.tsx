@@ -70,6 +70,7 @@ export default function App() {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
   const [draftIndex, setDraftIndex] = useState<number | null>(null);
+  const [formOrigin, setFormOrigin] = useState<'add' | 'edit'>('add');
   const [exitArmed, setExitArmed] = useState(false);
   const longPressFlag = useRef(false);
   const actionAnimRefs = useRef<Record<number, Animated.Value>>({});
@@ -159,14 +160,12 @@ export default function App() {
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   const usedTimeZones = useMemo(
-    () =>
-      zones
-        .filter((_, idx) => draftIndex === null || idx !== draftIndex)
-        .map((z) => normalizeTimeZoneId(z.timeZone)),
-    [zones, draftIndex],
+    () => zones.map((z) => normalizeTimeZoneId(z.timeZone)),
+    [zones],
   );
 
   const openAddZone = () => {
+    setFormOrigin('add');
     setShowMenu(false);
     setDraftIndex(null);
     setActionIndex(null);
@@ -277,6 +276,7 @@ export default function App() {
     };
 
     const handleEdit = () => {
+      setFormOrigin('edit');
       setDraftIndex(index);
       setShowForm(true);
       setActionIndex(null);
@@ -618,8 +618,18 @@ export default function App() {
             <AddZoneOverlay
               visible={showForm}
               usedTimeZones={usedTimeZones}
+              existingZones={zones}
               initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
               mode={draftIndex !== null ? 'edit' : 'add'}
+              onSelectExisting={(index) => {
+                setDraftIndex(index);
+                setActionIndex(null);
+                setShowForm(true);
+              }}
+              onReturnToAdd={() => {
+                setDraftIndex(null);
+              }}
+              startedInEdit={formOrigin === 'edit'}
               onSubmit={submitZone}
               onClose={() => {
                 setShowForm(false);

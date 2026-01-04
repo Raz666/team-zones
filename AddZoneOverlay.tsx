@@ -21,6 +21,10 @@ type AddZoneOverlayProps = {
   usedTimeZones: string[];
   mode?: 'add' | 'edit';
   initialValue?: ZoneDraft;
+  existingZones?: ZoneDraft[];
+  onSelectExisting?: (index: number) => void;
+  onReturnToAdd?: () => void;
+  startedInEdit?: boolean;
   onSubmit: (zone: ZoneDraft) => void;
   onClose: () => void;
 };
@@ -30,6 +34,10 @@ export function AddZoneOverlay({
   usedTimeZones,
   mode,
   initialValue,
+  existingZones = [],
+  onSelectExisting,
+  onReturnToAdd,
+  startedInEdit = false,
   onSubmit,
   onClose,
 }: AddZoneOverlayProps) {
@@ -43,6 +51,7 @@ export function AddZoneOverlay({
   const searchInputRef = useRef<TextInput>(null);
   const searchAnchorRef = useRef<View>(null);
   const overlayRef = useRef<View>(null);
+  const skipResetOnClearRef = useRef(false);
   const [dropdownAnchor, setDropdownAnchor] = useState<{
     x: number;
     y: number;
@@ -66,10 +75,15 @@ export function AddZoneOverlay({
     [allTimeZones],
   );
 
-  const normalizedInitialTimeZone = useMemo(
-    () => (initialValue ? normalizeTimeZoneId(initialValue.timeZone) : ''),
-    [initialValue],
-  );
+  const now = useMemo(() => new Date(), [isSearchFocused, search]);
+
+  const existingZoneById = useMemo(() => {
+    const map = new Map<string, { zone: ZoneDraft; index: number }>();
+    existingZones.forEach((zone, index) => {
+      map.set(normalizeTimeZoneId(zone.timeZone), { zone, index });
+    });
+    return map;
+  }, [existingZones]);
 
   const usedTimeZoneSet = useMemo(
     () => new Set(usedTimeZones.map((tz) => normalizeTimeZoneId(tz))),
@@ -78,12 +92,18 @@ export function AddZoneOverlay({
 
   const availableOptions = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const unused = allTimeZoneOptions.filter(
-      (option) => !usedTimeZoneSet.has(option.id) || option.id === normalizedInitialTimeZone,
-    );
-    if (!term) return unused;
-    return unused.filter((option) => option.searchText.includes(term));
-  }, [allTimeZoneOptions, normalizedInitialTimeZone, search, usedTimeZoneSet]);
+    if (!term) return allTimeZoneOptions;
+    return allTimeZoneOptions.filter((option) => {
+      if (option.searchText.includes(term)) return true;
+      const offsetLabel = formatUtcOffsetLabel(option.id, now).toLowerCase();
+      if (offsetLabel.includes(term)) return true;
+      if (offsetLabel.startsWith('utc')) {
+        const gmtLabel = `gmt${offsetLabel.slice(3)}`;
+        if (gmtLabel.includes(term)) return true;
+      }
+      return false;
+    });
+  }, [allTimeZoneOptions, now, search]);
 
   useEffect(() => {
     if (!visible) return;
@@ -96,6 +116,10 @@ export function AddZoneOverlay({
       setSearch(option.label);
       setError('');
       setIsSearchFocused(false);
+      return;
+    }
+    if (skipResetOnClearRef.current) {
+      skipResetOnClearRef.current = false;
       return;
     }
     setLabel('');
@@ -156,8 +180,40 @@ export function AddZoneOverlay({
   }, [handleCancel, visible]);
 
   const handleSelectTz = (option: TimeZoneOption) => {
+    const existingMatch = existingZoneById.get(option.id);
+    const isAutoEdit = !startedInEdit && mode === 'edit';
+
+    if (isAutoEdit) {
+      if (option.id === timeZone) {
+        setSearch(option.label);
+        setError('');
+        setIsSearchFocused(false);
+        return;
+      }
+      skipResetOnClearRef.current = true;
+      onReturnToAdd?.();
+      setTimeZone(option.id);
+      setLabel(option.city);
+      setSearch(option.label);
+      setError('');
+      setIsSearchFocused(false);
+      return;
+    }
+
+    if (existingMatch && !startedInEdit) {
+      const normalized = normalizeTimeZoneId(existingMatch.zone.timeZone);
+      setLabel(existingMatch.zone.label);
+      setTimeZone(normalized);
+      setMembersInput(existingMatch.zone.members?.join(', ') ?? '');
+      setSearch(option.label);
+      setError('');
+      setIsSearchFocused(false);
+      onSelectExisting?.(existingMatch.index);
+      return;
+    }
+
     setTimeZone(option.id);
-    setLabel((prev) => (prev.trim() ? prev : option.city));
+    setLabel(option.city);
     setSearch(option.label);
     setError('');
     setIsSearchFocused(false);
@@ -185,7 +241,6 @@ export function AddZoneOverlay({
     fontSize: 14,
   };
 
-  const now = useMemo(() => new Date(), [isSearchFocused, search]);
   const dropdownRowHeight = 56;
   const dropdownMaxHeight = 200;
   const dropdownCount = Math.min(availableOptions.length, 20);
@@ -374,6 +429,7 @@ export function AddZoneOverlay({
             scrollEnabled
             nestedScrollEnabled
             renderItem={({ item }) => {
+              const isUsed = existingZoneById.has(item.id) || usedTimeZoneSet.has(item.id);
               const locationLine = [item.district, item.country].filter(Boolean).join(', ');
               const timeLabel = formatTimeInZone(item.id, now);
               const offsetLabel = formatUtcOffsetLabel(item.id, now);
@@ -381,14 +437,29 @@ export function AddZoneOverlay({
                 <Pressable onPress={() => handleSelectTz(item)}>
                   <Box paddingVertical="sPlus" paddingHorizontal="m">
                     <Box flexDirection="row" alignItems="center" justifyContent="space-between">
-                      <Box flex={1} marginRight="s">
-                        <Text variant="body" color="textSecondary">
-                          {item.city}
-                        </Text>
-                        {locationLine ? (
-                          <Text variant="caption" color="muted">
-                            {locationLine}
+                      <Box flexDirection="row" alignItems="center" flex={1} marginRight="s">
+                        <Box flex={1}>
+                          <Text variant="body" color="textSecondary">
+                            {item.city}
                           </Text>
+                          {locationLine ? (
+                            <Text variant="caption" color="muted">
+                              {locationLine}
+                            </Text>
+                          ) : null}
+                        </Box>
+                        {isUsed ? (
+                          <Box
+                            marginLeft="s"
+                            paddingHorizontal="s"
+                            paddingVertical="xs"
+                            borderRadius="full"
+                            backgroundColor="primarySoft"
+                          >
+                            <Text variant="label" color="textSecondary">
+                              Added
+                            </Text>
+                          </Box>
                         ) : null}
                       </Box>
                       <Box alignItems="flex-end">

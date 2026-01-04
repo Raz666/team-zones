@@ -5,8 +5,14 @@ import { X } from 'lucide-react-native';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
-import { formatTimeInZone, formatUtcOffsetLabel, getTimeZoneOption } from './timeZoneDisplay';
+import {
+  formatTimeInZone,
+  formatUtcOffsetLabel,
+  getTimeZoneOption,
+  getTimeZoneOptions,
+} from './timeZoneDisplay';
 import type { TimeZoneOption } from './timeZoneDisplay';
+import { TIMEZONE_ALIASES } from './timeZoneAliases';
 import { IANA_TIMEZONES } from './timezones';
 import { normalizeTimeZoneId } from './timeZoneUtils';
 
@@ -14,6 +20,21 @@ export type ZoneDraft = {
   label: string;
   timeZone: string;
   members?: string[];
+};
+
+const normalizeLabelValue = (value: string) => value.trim().toLowerCase();
+
+const getOptionLabelKeys = (option: TimeZoneOption) => {
+  const keys = new Set<string>();
+  const cityKey = normalizeLabelValue(option.city);
+  if (cityKey) keys.add(cityKey);
+  if (option.legacyCity) {
+    const legacyKey = normalizeLabelValue(option.legacyCity);
+    if (legacyKey) keys.add(legacyKey);
+  }
+  const labelKey = normalizeLabelValue(option.label);
+  if (labelKey) keys.add(labelKey);
+  return keys;
 };
 
 type AddZoneOverlayProps = {
@@ -71,16 +92,33 @@ export function AddZoneOverlay({
   }, []);
 
   const allTimeZoneOptions = useMemo(
-    () => allTimeZones.map((tz) => getTimeZoneOption(tz)),
+    () => getTimeZoneOptions(allTimeZones, TIMEZONE_ALIASES),
     [allTimeZones],
   );
 
   const now = useMemo(() => new Date(), [isSearchFocused, search]);
 
-  const existingZoneById = useMemo(() => {
-    const map = new Map<string, { zone: ZoneDraft; index: number }>();
+  const existingZonesById = useMemo(() => {
+    const map = new Map<string, { zone: ZoneDraft; index: number }[]>();
     existingZones.forEach((zone, index) => {
-      map.set(normalizeTimeZoneId(zone.timeZone), { zone, index });
+      const zoneId = normalizeTimeZoneId(zone.timeZone);
+      const list = map.get(zoneId) ?? [];
+      list.push({ zone, index });
+      map.set(zoneId, list);
+    });
+    return map;
+  }, [existingZones]);
+
+  const existingLabelsById = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    existingZones.forEach((zone) => {
+      const zoneId = normalizeTimeZoneId(zone.timeZone);
+      const labelKey = normalizeLabelValue(zone.label);
+      const labels = map.get(zoneId) ?? new Set<string>();
+      if (labelKey) {
+        labels.add(labelKey);
+      }
+      map.set(zoneId, labels);
     });
     return map;
   }, [existingZones]);
@@ -90,12 +128,53 @@ export function AddZoneOverlay({
     [usedTimeZones],
   );
 
+  const findExistingMatch = (option: TimeZoneOption) => {
+    const matches = existingZonesById.get(option.timeZoneId);
+    if (!matches) return null;
+    const candidates = getOptionLabelKeys(option);
+    for (const match of matches) {
+      const labelKey = normalizeLabelValue(match.zone.label);
+      if (candidates.has(labelKey)) {
+        return match;
+      }
+    }
+    return null;
+  };
+
+  const isOptionUsed = (option: TimeZoneOption) => {
+    const labels = existingLabelsById.get(option.timeZoneId);
+    if (labels && labels.size > 0) {
+      for (const key of getOptionLabelKeys(option)) {
+        if (labels.has(key)) return true;
+      }
+      return false;
+    }
+    if (existingZones.length === 0) {
+      return usedTimeZoneSet.has(option.timeZoneId);
+    }
+    return false;
+  };
+
+  const getLocationLine = (option: TimeZoneOption) => {
+    const region =
+      option.region && option.region !== 'Americas' ? option.region : undefined;
+    const parts = option.district
+      ? [option.district, option.country]
+      : [option.country, region];
+    const cleaned = parts.filter(Boolean) as string[];
+    const deduped = cleaned.filter((piece, index) => {
+      if (index === 0) return true;
+      return cleaned[index - 1].toLowerCase() !== piece.toLowerCase();
+    });
+    return deduped.join(', ');
+  };
+
   const availableOptions = useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return allTimeZoneOptions;
     return allTimeZoneOptions.filter((option) => {
       if (option.searchText.includes(term)) return true;
-      const offsetLabel = formatUtcOffsetLabel(option.id, now).toLowerCase();
+      const offsetLabel = formatUtcOffsetLabel(option.timeZoneId, now).toLowerCase();
       if (offsetLabel.includes(term)) return true;
       if (offsetLabel.startsWith('utc')) {
         const gmtLabel = `gmt${offsetLabel.slice(3)}`;
@@ -109,9 +188,11 @@ export function AddZoneOverlay({
     if (!visible) return;
     if (initialValue) {
       const normalized = normalizeTimeZoneId(initialValue.timeZone);
-      const option = getTimeZoneOption(normalized);
+      const option =
+        allTimeZoneOptions.find((item) => item.id === normalized) ??
+        getTimeZoneOption(normalized);
       setLabel(initialValue.label);
-      setTimeZone(option.id);
+      setTimeZone(option.timeZoneId);
       setMembersInput(initialValue.members?.join(', ') ?? '');
       setSearch(option.label);
       setError('');
@@ -128,7 +209,7 @@ export function AddZoneOverlay({
     setSearch('');
     setError('');
     setIsSearchFocused(false);
-  }, [visible, initialValue]);
+  }, [allTimeZoneOptions, visible, initialValue]);
 
   const reset = () => {
     setLabel('');
@@ -180,11 +261,15 @@ export function AddZoneOverlay({
   }, [handleCancel, visible]);
 
   const handleSelectTz = (option: TimeZoneOption) => {
-    const existingMatch = existingZoneById.get(option.id);
+    const existingMatch = findExistingMatch(option);
     const isAutoEdit = !startedInEdit && mode === 'edit';
+    const currentLabelKey = normalizeLabelValue(initialValue?.label ?? label);
+    const optionKeys = getOptionLabelKeys(option);
+    const isSameSelection =
+      option.timeZoneId === timeZone && currentLabelKey && optionKeys.has(currentLabelKey);
 
     if (isAutoEdit) {
-      if (option.id === timeZone) {
+      if (isSameSelection) {
         setSearch(option.label);
         setError('');
         setIsSearchFocused(false);
@@ -192,7 +277,7 @@ export function AddZoneOverlay({
       }
       skipResetOnClearRef.current = true;
       onReturnToAdd?.();
-      setTimeZone(option.id);
+      setTimeZone(option.timeZoneId);
       setLabel(option.city);
       setSearch(option.label);
       setError('');
@@ -212,7 +297,7 @@ export function AddZoneOverlay({
       return;
     }
 
-    setTimeZone(option.id);
+    setTimeZone(option.timeZoneId);
     setLabel(option.city);
     setSearch(option.label);
     setError('');
@@ -291,7 +376,10 @@ export function AddZoneOverlay({
           left: 0,
           right: 0,
         }}
-        onPress={() => setIsSearchFocused(false)}
+        onPress={() => {
+          setIsSearchFocused(false);
+          searchInputRef.current?.blur();
+        }}
       >
         <Box flex={1} backgroundColor="overlay" />
       </Pressable>
@@ -339,6 +427,10 @@ export function AddZoneOverlay({
                 setIsSearchFocused(true);
               }}
               onFocus={() => {
+                setIsSearchFocused(true);
+                updateDropdownAnchor();
+              }}
+              onPressIn={() => {
                 setIsSearchFocused(true);
                 updateDropdownAnchor();
               }}
@@ -429,10 +521,10 @@ export function AddZoneOverlay({
             scrollEnabled
             nestedScrollEnabled
             renderItem={({ item }) => {
-              const isUsed = existingZoneById.has(item.id) || usedTimeZoneSet.has(item.id);
-              const locationLine = [item.district, item.country].filter(Boolean).join(', ');
-              const timeLabel = formatTimeInZone(item.id, now);
-              const offsetLabel = formatUtcOffsetLabel(item.id, now);
+              const isUsed = isOptionUsed(item);
+              const locationLine = getLocationLine(item);
+              const timeLabel = formatTimeInZone(item.timeZoneId, now);
+              const offsetLabel = formatUtcOffsetLabel(item.timeZoneId, now);
               return (
                 <Pressable onPress={() => handleSelectTz(item)}>
                   <Box paddingVertical="sPlus" paddingHorizontal="m">

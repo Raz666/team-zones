@@ -1,10 +1,15 @@
+import type { TimeZoneAlias } from './timeZoneAliases';
+import { TIMEZONE_COUNTRIES } from './timeZoneCountries';
 import { normalizeTimeZoneId } from './timeZoneUtils';
 
 export type TimeZoneOption = {
   id: string;
+  timeZoneId: string;
   city: string;
   district?: string;
-  country: string;
+  country?: string;
+  region?: string;
+  legacyCity?: string;
   label: string;
   searchText: string;
 };
@@ -46,6 +51,76 @@ const offsetFormatterOptions: Intl.DateTimeFormatOptions = {
 
 function prettifySegment(segment: string): string {
   return segment.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function shouldIncludeRegionInLabel(
+  region?: string,
+  country?: string,
+  district?: string,
+): boolean {
+  if (!region) return false;
+  if (region === 'Americas') return false;
+  if (region === 'UTC') return true;
+  return true;
+}
+
+function buildOptionLabel(
+  city: string,
+  district?: string,
+  country?: string,
+  region?: string,
+): string {
+  const pieces = [city, district, country].filter(Boolean) as string[];
+  if (shouldIncludeRegionInLabel(region, country, district)) {
+    pieces.push(region as string);
+  }
+  const deduped = pieces.filter((piece, index) => {
+    if (index === 0) return true;
+    return pieces[index - 1].toLowerCase() !== piece.toLowerCase();
+  });
+  return deduped.join(', ');
+}
+
+function buildSearchText(
+  label: string,
+  zoneId: string,
+  searchTerms?: Array<string | undefined>,
+): string {
+  const pieces = [label, zoneId];
+  if (searchTerms && searchTerms.length > 0) {
+    for (const term of searchTerms) {
+      if (term) pieces.push(term);
+    }
+  }
+  return pieces.join(' ').toLowerCase();
+}
+
+function getCountrySearchTerms(country?: string): string[] {
+  if (!country) return [];
+  if (country === 'United States') {
+    return ['USA', 'US', 'U.S.', 'United States of America'];
+  }
+  if (country === 'United Kingdom') {
+    return ['UK', 'U.K.', 'Great Britain', 'Britain', 'GB'];
+  }
+  return [];
+}
+
+function toIdSegment(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+function buildAliasId(
+  timeZoneId: string,
+  city: string,
+  district?: string,
+  country?: string,
+): string {
+  const parts = [timeZoneId, city, district, country].filter(Boolean) as string[];
+  return `alias:${parts.map(toIdSegment).join(':')}`;
 }
 
 function getTimeFormatter(timeZone: string): Intl.DateTimeFormat {
@@ -104,7 +179,8 @@ function formatOffsetLabel(offsetMinutes: number): string {
 function buildLocationParts(timeZone: string): {
   city: string;
   district?: string;
-  country: string;
+  country?: string;
+  region?: string;
 } {
   const zoneId = normalizeTimeZoneId(timeZone);
   const [region, ...rest] = zoneId.split('/');
@@ -112,7 +188,8 @@ function buildLocationParts(timeZone: string): {
   const middleRaw = rest.slice(0, -1);
 
   let district: string | undefined;
-  let country = REGION_LABELS[region] ?? prettifySegment(region);
+  let country: string | undefined;
+  const regionLabel = REGION_LABELS[region] ?? prettifySegment(region);
 
   if (region === 'America' && middleRaw.length > 0) {
     const first = middleRaw[0];
@@ -130,7 +207,11 @@ function buildLocationParts(timeZone: string): {
   }
 
   const city = prettifySegment(cityRaw);
-  return { city, district, country };
+  const countryOverride = TIMEZONE_COUNTRIES[zoneId];
+  if (countryOverride) {
+    country = countryOverride;
+  }
+  return { city, district, country, region: regionLabel };
 }
 
 export function getTimeZoneOption(timeZone: string): TimeZoneOption {
@@ -138,25 +219,144 @@ export function getTimeZoneOption(timeZone: string): TimeZoneOption {
   const cached = timeZoneOptionCache.get(zoneId);
   if (cached) return cached;
 
-  const { city, district, country } = buildLocationParts(zoneId);
-  const pieces = [city, district, country].filter(Boolean);
-  const deduped = pieces.filter((piece, index) => {
-    if (index === 0) return true;
-    return pieces[index - 1].toLowerCase() !== piece.toLowerCase();
-  });
-  const label = deduped.join(', ');
-  const searchText = `${label} ${zoneId}`.toLowerCase();
+  const { city, district, country, region } = buildLocationParts(zoneId);
+  const label = buildOptionLabel(city, district, country, region);
+  const regionTerm = region && region !== 'Americas' ? region : undefined;
+  const countryTerms = getCountrySearchTerms(country);
+  const searchText = buildSearchText(label, zoneId, [regionTerm, ...countryTerms]);
 
   const option = {
     id: zoneId,
+    timeZoneId: zoneId,
     city,
     district,
     country,
+    region,
     label,
     searchText,
   };
   timeZoneOptionCache.set(zoneId, option);
   return option;
+}
+
+export function getTimeZoneOptions(
+  timeZones: string[],
+  aliases: TimeZoneAlias[],
+): TimeZoneOption[] {
+  const baseOptions = timeZones.map((timeZone) => getTimeZoneOption(timeZone));
+  if (!aliases.length) return baseOptions;
+
+  const baseByZone = new Map<string, TimeZoneOption>();
+  const labelByZone = new Map<string, Set<string>>();
+  const baseCityByZone = new Map<string, string>();
+  const seenIds = new Set(baseOptions.map((option) => option.id));
+
+  for (const option of baseOptions) {
+    const zoneId = option.timeZoneId;
+    baseByZone.set(zoneId, option);
+    baseCityByZone.set(zoneId, option.city.toLowerCase());
+    const labels = labelByZone.get(zoneId) ?? new Set<string>();
+    labels.add(option.label.toLowerCase());
+    labelByZone.set(zoneId, labels);
+  }
+
+  const overrides = new Map<string, TimeZoneOption>();
+  const inferredCountryByZone = new Map<string, string>();
+
+  const buildAliasOption = (
+    zoneId: string,
+    alias: TimeZoneAlias,
+    baseOption: TimeZoneOption,
+    useZoneIdAsId: boolean,
+  ): TimeZoneOption => {
+    const city = alias.city;
+    const district = alias.district ?? baseOption.district;
+    const country = alias.country ?? baseOption.country;
+    const region = baseOption.region;
+    const legacyCity =
+      useZoneIdAsId && baseOption.city.toLowerCase() !== city.toLowerCase()
+        ? baseOption.city
+        : undefined;
+    const label = buildOptionLabel(city, district, country, region);
+    const countryTerms = getCountrySearchTerms(country);
+    const regionTerm = region && region !== 'Americas' ? region : undefined;
+    const searchText = buildSearchText(label, zoneId, [
+      regionTerm,
+      ...(alias.searchTerms ?? []),
+      ...countryTerms,
+      legacyCity,
+    ]);
+    const id = useZoneIdAsId ? zoneId : buildAliasId(zoneId, city, district, country);
+    return {
+      id,
+      timeZoneId: zoneId,
+      city,
+      district,
+      country,
+      region,
+      legacyCity,
+      label,
+      searchText,
+    };
+  };
+
+  for (const alias of aliases) {
+    const zoneId = normalizeTimeZoneId(alias.timeZoneId);
+    const baseOption = baseByZone.get(zoneId);
+    if (!baseOption) continue;
+    if (alias.country && !inferredCountryByZone.has(zoneId)) {
+      inferredCountryByZone.set(zoneId, alias.country);
+    }
+    if (!alias.primary) continue;
+    const option = buildAliasOption(zoneId, alias, baseOption, true);
+    overrides.set(zoneId, option);
+    const labels = labelByZone.get(zoneId) ?? new Set<string>();
+    labels.add(option.label.toLowerCase());
+    labelByZone.set(zoneId, labels);
+  }
+
+  for (const [zoneId, country] of inferredCountryByZone) {
+    if (overrides.has(zoneId)) continue;
+    const baseOption = baseByZone.get(zoneId);
+    if (!baseOption) continue;
+    const primaryAlias: TimeZoneAlias = {
+      timeZoneId: zoneId,
+      city: baseOption.city,
+      country,
+      primary: true,
+    };
+    const option = buildAliasOption(zoneId, primaryAlias, baseOption, true);
+    overrides.set(zoneId, option);
+    const labels = labelByZone.get(zoneId) ?? new Set<string>();
+    labels.add(option.label.toLowerCase());
+    labelByZone.set(zoneId, labels);
+  }
+
+  const aliasOptions: TimeZoneOption[] = [];
+  for (const alias of aliases) {
+    const zoneId = normalizeTimeZoneId(alias.timeZoneId);
+    const baseOption = baseByZone.get(zoneId);
+    if (!baseOption) continue;
+    if (alias.primary) continue;
+    const baseCity = baseCityByZone.get(zoneId);
+    if (baseCity && baseCity === alias.city.toLowerCase()) continue;
+
+    const option = buildAliasOption(zoneId, alias, baseOption, false);
+    const labelKey = option.label.toLowerCase();
+    const labels = labelByZone.get(zoneId) ?? new Set<string>();
+    if (labels.has(labelKey)) continue;
+
+    if (seenIds.has(option.id)) continue;
+
+    aliasOptions.push(option);
+    labels.add(labelKey);
+    labelByZone.set(zoneId, labels);
+    seenIds.add(option.id);
+  }
+
+  aliasOptions.sort((a, b) => a.label.localeCompare(b.label));
+  const mergedBase = baseOptions.map((option) => overrides.get(option.timeZoneId) ?? option);
+  return [...mergedBase, ...aliasOptions];
 }
 
 export function formatTimeInZone(timeZone: string, date: Date): string {

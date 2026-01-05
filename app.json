@@ -44,6 +44,6 @@
         "projectId": "759a4f4a-0848-4dd7-aaf2-9e8d8f02574e"
       }
     },
-    "plugins": ["expo-asset", "@react-native-community/datetimepicker"]
+    "plugins": ["expo-asset", "@react-native-community/datetimepicker", "expo-localization"]
   }
 }

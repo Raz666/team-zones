@@ -1,3 +1,4 @@
+import './src/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';

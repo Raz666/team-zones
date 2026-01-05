@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Pressable } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Animated, BackHandler, Dimensions, Easing, Pressable } from 'react-native';
+import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -52,9 +52,12 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
   }
 }
 
-export default function App() {
+function AppContent() {
   const STORAGE_KEY = 'teamzones:zones:v1';
   const THEME_STORAGE_KEY = 'teamzones:theme:v1';
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom;
+  const topInset = insets.top;
   const [mode, setMode] = useState<'light' | 'dark'>('dark');
   const theme: AppTheme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
   const isDark = mode === 'dark';
@@ -72,6 +75,8 @@ export default function App() {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
+  const [deleteModalRendered, setDeleteModalRendered] = useState(false);
   const [draftIndex, setDraftIndex] = useState<number | null>(null);
   const [formOrigin, setFormOrigin] = useState<'add' | 'edit'>('add');
   const [exitArmed, setExitArmed] = useState(false);
@@ -80,6 +85,7 @@ export default function App() {
   const actionVisibility = useRef<Record<number, boolean>>({});
   const exitArmedRef = useRef(false);
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deleteModalAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (paused) return;
@@ -147,6 +153,32 @@ export default function App() {
   }, [showForm, showPrivacyPolicy]);
 
   useEffect(() => {
+    if (pendingDeleteIndex !== null) {
+      setDeleteIndex(pendingDeleteIndex);
+      setDeleteModalRendered(true);
+      Animated.timing(deleteModalAnimation, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.inOut(Easing.circle),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    Animated.timing(deleteModalAnimation, {
+      toValue: 0,
+      duration: 260,
+      easing: Easing.inOut(Easing.circle),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setDeleteModalRendered(false);
+        setDeleteIndex(null);
+      }
+    });
+  }, [deleteModalAnimation, pendingDeleteIndex]);
+
+  useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (showForm || showPrivacyPolicy) {
         return false;
@@ -189,6 +221,17 @@ export default function App() {
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   const usedTimeZones = useMemo(() => zones.map((z) => normalizeTimeZoneId(z.timeZone)), [zones]);
+  const deleteModalOffset = Dimensions.get('window').height;
+
+  const deleteBackdropOpacity = deleteModalAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
+
+  const deleteModalTranslateY = deleteModalAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [deleteModalOffset, 0],
+  });
 
   const openAddZone = () => {
     setFormOrigin('add');
@@ -302,7 +345,7 @@ export default function App() {
     const info = formatZone(currentTime, item, deviceTimeZone);
     const isHover = hoverIndex === index && activeIndex !== null && activeIndex !== index;
     const showActions = actionIndex === index && !isActive;
-    const actionAnim =
+    const actionAnimation =
       actionAnimRefs.current[index] || (actionAnimRefs.current[index] = new Animated.Value(0));
 
     const handlePress = () => {
@@ -322,28 +365,27 @@ export default function App() {
 
     const handleDelete = () => {
       setPendingDeleteIndex(index);
-      setActionIndex(null);
     };
 
     const wasVisible = actionVisibility.current[index] || false;
     if (showActions && !wasVisible) {
       actionVisibility.current[index] = true;
-      actionAnim.setValue(0);
-      Animated.timing(actionAnim, {
+      actionAnimation.setValue(0);
+      Animated.timing(actionAnimation, {
         toValue: 1,
         duration: 160,
         useNativeDriver: true,
       }).start();
     } else if (!showActions && wasVisible) {
       actionVisibility.current[index] = false;
-      actionAnim.setValue(0);
+      actionAnimation.setValue(0);
     }
 
     const actionStyle = {
-      opacity: actionAnim,
+      opacity: actionAnimation,
       transform: [
         {
-          translateY: actionAnim.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }),
+          translateY: actionAnimation.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }),
         },
       ],
     };
@@ -489,303 +531,329 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider theme={theme}>
-        <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.colors.background} />
-        <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <ThemeProvider theme={theme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.colors.background} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+        <Box
+          flex={1}
+          backgroundColor="background"
+          paddingHorizontal="l"
+          paddingTop="l"
+          paddingBottom="8xl"
+        >
+          {showMenu ? (
+            <Pressable
+              onPress={() => setShowMenu(false)}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 1,
+              }}
+            />
+          ) : null}
           <Box
-            flex={1}
-            backgroundColor="background"
-            paddingHorizontal="l"
-            paddingTop="l"
-            paddingBottom="8xl"
+            flexDirection="row"
+            justifyContent="space-between"
+            alignItems="center"
+            marginBottom="l"
+            style={{ zIndex: 2, position: 'relative' }}
           >
-            {showMenu ? (
-              <Pressable
-                onPress={() => setShowMenu(false)}
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  zIndex: 1,
-                }}
-              />
-            ) : null}
-            <Box
-              flexDirection="row"
-              justifyContent="space-between"
-              alignItems="center"
-              marginBottom="l"
-              style={{ zIndex: 2, position: 'relative' }}
-            >
-              <Text variant="heading2">Team Zones</Text>
-              <Box flexDirection="row" alignItems="center">
-                <Box style={{ position: 'relative' }}>
-                  <Button
-                    iconOnly
-                    accessibilityLabel="Toggle menu"
-                    onPress={() => setShowMenu((prev) => !prev)}
-                    variant="primary"
-                    size="sm"
-                    radius="m"
+            <Text variant="heading2">Team Zones</Text>
+            <Box flexDirection="row" alignItems="center">
+              <Box style={{ position: 'relative' }}>
+                <Button
+                  iconOnly
+                  accessibilityLabel="Toggle menu"
+                  onPress={() => setShowMenu((prev) => !prev)}
+                  variant="primary"
+                  size="sm"
+                  radius="m"
+                  borderWidth={1}
+                  borderColor="primary"
+                  icon={<Menu color={theme.colors.textInverse} size={18} />}
+                />
+                {showMenu ? (
+                  <Box
+                    backgroundColor="card"
+                    borderRadius="l"
                     borderWidth={1}
-                    borderColor="primary"
-                    icon={<Menu color={theme.colors.textInverse} size={18} />}
-                  />
-                  {showMenu ? (
-                    <Box
-                      backgroundColor="card"
-                      borderRadius="l"
-                      borderWidth={1}
-                      borderColor="borderSubtle"
-                      paddingVertical="xs"
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: theme.spacing.s,
-                        minWidth: 200,
-                        zIndex: 3,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.2,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 6 },
-                        elevation: 10,
-                      }}
-                    >
-                      {menuItems.map((item, index) => (
-                        <Pressable
-                          key={item.label}
-                          onPress={item.onPress}
-                          style={({ pressed }) => ({
-                            opacity: pressed ? 0.85 : 1,
-                          })}
+                    borderColor="borderSubtle"
+                    paddingVertical="xs"
+                    style={{
+                      position: 'absolute',
+                      top: '100%',
+                      right: 0,
+                      marginTop: theme.spacing.s,
+                      minWidth: 200,
+                      zIndex: 3,
+                      shadowColor: '#000',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 10,
+                      shadowOffset: { width: 0, height: 6 },
+                      elevation: 10,
+                    }}
+                  >
+                    {menuItems.map((item, index) => (
+                      <Pressable
+                        key={item.label}
+                        onPress={item.onPress}
+                        style={({ pressed }) => ({
+                          opacity: pressed ? 0.85 : 1,
+                        })}
+                      >
+                        <Box
+                          flexDirection="row"
+                          alignItems="center"
+                          paddingHorizontal="mPlus"
+                          paddingVertical="lPlus"
+                          borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
+                          borderBottomColor="borderSubtle"
                         >
-                          <Box
-                            flexDirection="row"
-                            alignItems="center"
-                            paddingHorizontal="mPlus"
-                            paddingVertical="lPlus"
-                            borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
-                            borderBottomColor="borderSubtle"
-                          >
-                            {item.icon}
-                            <Box width={theme.spacing.sPlus} />
-                            <Text variant="subtitle">{item.label}</Text>
-                          </Box>
-                        </Pressable>
-                      ))}
-                    </Box>
-                  ) : null}
-                </Box>
+                          {item.icon}
+                          <Box width={theme.spacing.sPlus} />
+                          <Text variant="subtitle">{item.label}</Text>
+                        </Box>
+                      </Pressable>
+                    ))}
+                  </Box>
+                ) : null}
               </Box>
             </Box>
+          </Box>
 
-            {zones.length === 0 ? (
-              <Box flex={1} justifyContent="center" alignItems="center">
-                <Text variant="heading2" color="textSecondary">
-                  No zones yet
+          {zones.length === 0 ? (
+            <Box flex={1} justifyContent="center" alignItems="center">
+              <Text variant="heading2" color="textSecondary">
+                No zones yet
+              </Text>
+              <Box marginTop="xsPlus">
+                <Text variant="caption" color="muted">
+                  Add your first city to see time differences.
                 </Text>
-                <Box marginTop="xsPlus">
-                  <Text variant="caption" color="muted">
-                    Add your first city to see time differences.
-                  </Text>
-                </Box>
-                <Box marginTop="sPlus">
-                  <Button
-                    label="Add a time zone"
-                    icon={<Plus size={18} color={theme.colors.textInverse} />}
-                    onPress={openAddZone}
-                  />
-                </Box>
               </Box>
-            ) : (
-              <DragList
-                contentContainerStyle={{ paddingBottom: theme.spacing['5xl'] }}
-                data={zones}
-                keyExtractor={(item) => `${item.label}-${item.timeZone}`}
-                renderItem={renderItem}
-                onReordered={onReordered}
-                onHoverChanged={(index) => setHoverIndex(index)}
-              />
-            )}
+              <Box marginTop="sPlus">
+                <Button
+                  label="Add a time zone"
+                  icon={<Plus size={18} color={theme.colors.textInverse} />}
+                  onPress={openAddZone}
+                />
+              </Box>
+            </Box>
+          ) : (
+            <DragList
+              contentContainerStyle={{ paddingBottom: theme.spacing['5xl'] }}
+              data={zones}
+              keyExtractor={(item) => `${item.label}-${item.timeZone}`}
+              renderItem={renderItem}
+              onReordered={onReordered}
+              onHoverChanged={(index) => setHoverIndex(index)}
+            />
+          )}
 
-            {zones.length > 0 ? (
-              <Button
-                iconOnly
-                accessibilityLabel="Add time zone"
-                onPress={openAddZone}
-                variant="primary"
-                radius="xl"
-                iconOnlySize={52}
-                icon={<Plus size={22} color={theme.colors.textInverse} />}
-                containerStyle={{
-                  position: 'absolute',
-                  right: theme.spacing.l,
-                  bottom: theme.spacing['7xl'],
-                  zIndex: 3,
-                }}
-                contentStyle={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.25,
-                  shadowRadius: 10,
-                  shadowOffset: { width: 0, height: 6 },
-                  elevation: 12,
-                }}
-              />
-            ) : null}
-            {exitArmed ? (
+          {zones.length > 0 ? (
+            <Button
+              iconOnly
+              accessibilityLabel="Add time zone"
+              onPress={openAddZone}
+              variant="primary"
+              radius="xl"
+              iconOnlySize={52}
+              icon={<Plus size={22} color={theme.colors.textInverse} />}
+              containerStyle={{
+                position: 'absolute',
+                right: theme.spacing.l,
+                bottom: theme.spacing['7xl'],
+                zIndex: 3,
+              }}
+              contentStyle={{
+                shadowColor: '#000',
+                shadowOpacity: 0.25,
+                shadowRadius: 10,
+                shadowOffset: { width: 0, height: 6 },
+                elevation: 12,
+              }}
+            />
+          ) : null}
+          {exitArmed ? (
+            <Box
+              position="absolute"
+              left={theme.spacing.l}
+              right={theme.spacing.l}
+              bottom={theme.spacing['6xl']}
+              zIndex={2}
+              pointerEvents="none"
+              alignItems="center"
+            >
               <Box
-                position="absolute"
-                left={theme.spacing.l}
-                right={theme.spacing.l}
-                bottom={theme.spacing['6xl']}
-                zIndex={2}
-                pointerEvents="none"
-                alignItems="center"
+                paddingHorizontal="m"
+                paddingVertical="sPlus"
+                borderRadius="l"
+                backgroundColor="card"
+                borderWidth={1}
+                borderColor="borderSubtle"
+                style={{
+                  shadowColor: '#000',
+                  shadowOpacity: 0.2,
+                  shadowRadius: 8,
+                  shadowOffset: { width: 0, height: 4 },
+                  elevation: 6,
+                }}
               >
-                <Box
-                  paddingHorizontal="m"
-                  paddingVertical="sPlus"
-                  borderRadius="l"
-                  backgroundColor="card"
-                  borderWidth={1}
-                  borderColor="borderSubtle"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOpacity: 0.2,
-                    shadowRadius: 8,
-                    shadowOffset: { width: 0, height: 4 },
-                    elevation: 6,
-                  }}
-                >
-                  <Text variant="caption" color="textSecondary">
-                    {"Press the 'Back' button to exit."}
-                  </Text>
-                </Box>
+                <Text variant="caption" color="textSecondary">
+                  {"Press the 'Back' button to exit."}
+                </Text>
               </Box>
-            ) : null}
-            {pendingDeleteIndex !== null ? (
-              <Pressable
-                onPress={() => setPendingDeleteIndex(null)}
+            </Box>
+          ) : null}
+          {deleteModalRendered ? (
+            <Pressable
+              onPress={() => setPendingDeleteIndex(null)}
+              style={{
+                position: 'absolute',
+                top: -topInset,
+                left: 0,
+                right: 0,
+                bottom: -bottomInset,
+                zIndex: 4,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingTop: topInset,
+                paddingBottom: bottomInset,
+              }}
+            >
+              <Animated.View
                 style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  zIndex: 4,
+                  backgroundColor: theme.colors.overlay,
+                  opacity: deleteBackdropOpacity,
+                }}
+              />
+              <Animated.View
+                style={{
+                  width: '100%',
+                  transform: [{ translateY: deleteModalTranslateY }],
                 }}
               >
-                <Box flex={1} backgroundColor="overlay" justifyContent="center" alignItems="center">
-                  <Pressable
-                    onPress={() => {}}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.98 : 1, width: '100%' })}
+                <Pressable
+                  onPress={() => {}}
+                  style={({ pressed }) => ({ opacity: pressed ? 0.98 : 1, width: '100%' })}
+                >
+                  <Box
+                    marginHorizontal="l"
+                    backgroundColor="card"
+                    borderRadius="l"
+                    borderWidth={1}
+                    borderColor="borderSubtle"
+                    padding="l"
+                    style={{
+                      shadowColor: '#000',
+                      shadowOpacity: 0.2,
+                      shadowRadius: 10,
+                      shadowOffset: { width: 0, height: 6 },
+                      elevation: 10,
+                    }}
                   >
-                    <Box
-                      marginHorizontal="l"
-                      backgroundColor="card"
-                      borderRadius="l"
-                      borderWidth={1}
-                      borderColor="borderSubtle"
-                      padding="l"
-                      style={{
-                        shadowColor: '#000',
-                        shadowOpacity: 0.2,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 6 },
-                        elevation: 10,
-                      }}
-                    >
-                      <Text variant="heading2" color="text">
-                        Delete zone?
+                    <Text variant="heading2" color="text">
+                      Delete zone?
+                    </Text>
+                    <Box marginTop="xsPlus">
+                      <Text variant="body" color="textSecondary" marginVertical="l">
+                        This will remove {zones[deleteIndex ?? -1]?.label ?? 'this zone'} from your
+                        list.
                       </Text>
-                      <Box marginTop="xsPlus">
-                        <Text variant="body" color="textSecondary" marginVertical="l">
-                          This will remove {zones[pendingDeleteIndex]?.label ?? 'this zone'} from
-                          your list.
-                        </Text>
-                      </Box>
-                      <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
-                        <Box marginRight="m">
-                          <Button
-                            label="Cancel"
-                            variant="ghost"
-                            size="sm"
-                            onPress={() => setPendingDeleteIndex(null)}
-                            icon={<X size={14} color={theme.colors.text} />}
-                          />
-                        </Box>
+                    </Box>
+                    <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
+                      <Box marginRight="m">
                         <Button
-                          label="Delete"
+                          label="Cancel"
+                          variant="ghost"
                           size="sm"
-                          onPress={() => {
-                            if (pendingDeleteIndex !== null) {
-                              deleteZone(pendingDeleteIndex);
-                              setPendingDeleteIndex(null);
-                            }
-                          }}
-                          backgroundColor="danger"
-                          borderColor="danger"
-                          icon={<Trash2 size={14} color={theme.colors.textInverse} />}
+                          onPress={() => setPendingDeleteIndex(null)}
+                          icon={<X size={14} color={theme.colors.text} />}
                         />
                       </Box>
+                      <Button
+                        label="Delete"
+                        size="sm"
+                        onPress={() => {
+                          if (deleteIndex !== null) {
+                            deleteZone(deleteIndex);
+                            setPendingDeleteIndex(null);
+                          }
+                        }}
+                        backgroundColor="danger"
+                        borderColor="danger"
+                        icon={<Trash2 size={14} color={theme.colors.textInverse} />}
+                      />
                     </Box>
-                  </Pressable>
-                </Box>
-              </Pressable>
-            ) : null}
+                  </Box>
+                </Pressable>
+              </Animated.View>
+            </Pressable>
+          ) : null}
 
-            <AddZoneOverlay
-              visible={showForm}
-              usedTimeZones={usedTimeZones}
-              existingZones={zones}
-              initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
-              mode={draftIndex !== null ? 'edit' : 'add'}
-              onSelectExisting={(index) => {
-                setDraftIndex(index);
-                setActionIndex(null);
-                setShowForm(true);
-              }}
-              onReturnToAdd={() => {
-                setDraftIndex(null);
-              }}
-              startedInEdit={formOrigin === 'edit'}
-              onSubmit={submitZone}
-              onSubmitAtStart={submitZoneAtStart}
-              onClose={() => {
-                setShowForm(false);
-                setDraftIndex(null);
-                longPressFlag.current = false;
-              }}
+          <AddZoneOverlay
+            visible={showForm}
+            usedTimeZones={usedTimeZones}
+            existingZones={zones}
+            initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
+            mode={draftIndex !== null ? 'edit' : 'add'}
+            onSelectExisting={(index) => {
+              setDraftIndex(index);
+              setActionIndex(null);
+              setShowForm(true);
+            }}
+            onReturnToAdd={() => {
+              setDraftIndex(null);
+            }}
+            startedInEdit={formOrigin === 'edit'}
+            onSubmit={submitZone}
+            onSubmitAtStart={submitZoneAtStart}
+            onClose={() => {
+              setShowForm(false);
+              setDraftIndex(null);
+              longPressFlag.current = false;
+            }}
+          />
+          <PrivacyPolicyModal
+            visible={showPrivacyPolicy}
+            themeMode={mode}
+            onClose={() => setShowPrivacyPolicy(false)}
+          />
+          <UserTimeBar
+            time={currentTime}
+            onChange={() => {
+              setPaused(true);
+              setShowPicker(true);
+            }}
+            onReset={resetToRealTime}
+          />
+          {showPicker ? (
+            <DateTimePicker
+              value={currentTime}
+              mode="time"
+              is24Hour
+              display="default"
+              onChange={onChangeTime}
             />
-            <PrivacyPolicyModal
-              visible={showPrivacyPolicy}
-              themeMode={mode}
-              onClose={() => setShowPrivacyPolicy(false)}
-            />
-            <UserTimeBar
-              time={currentTime}
-              onChange={() => {
-                setPaused(true);
-                setShowPicker(true);
-              }}
-              onReset={resetToRealTime}
-            />
-            {showPicker ? (
-              <DateTimePicker
-                value={currentTime}
-                mode="time"
-                is24Hour
-                display="default"
-                onChange={onChangeTime}
-              />
-            ) : null}
-          </Box>
-        </SafeAreaView>
-      </ThemeProvider>
+          ) : null}
+        </Box>
+      </SafeAreaView>
+    </ThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
     </SafeAreaProvider>
   );
 }

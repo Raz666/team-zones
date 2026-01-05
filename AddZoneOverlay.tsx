@@ -1,7 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, FlatList, Pressable, TextInput, View } from 'react-native';
+import {
+  Animated,
+  BackHandler,
+  Easing,
+  FlatList,
+  Pressable,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useTheme } from '@shopify/restyle';
 import { AlertTriangle, ArrowUp, Check, Plus, X } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
@@ -21,6 +31,8 @@ export type ZoneDraft = {
   timeZone: string;
   members?: string[];
 };
+
+const AnimatedBox = Animated.createAnimatedComponent(Box);
 
 const normalizeLabelValue = (value: string) => value.trim().toLowerCase();
 
@@ -65,6 +77,12 @@ export function AddZoneOverlay({
   onClose,
 }: AddZoneOverlayProps) {
   const theme = useTheme<AppTheme>();
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom;
+  const topInset = insets.top;
+  const { height: windowHeight } = useWindowDimensions();
+  const [isRendered, setIsRendered] = useState(visible);
+  const slideAnimation = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [label, setLabel] = useState('');
   const [timeZone, setTimeZone] = useState('');
   const [membersInput, setMembersInput] = useState('');
@@ -211,6 +229,30 @@ export function AddZoneOverlay({
     setIsSearchFocused(false);
     setLabelWasCleared(false);
   }, [allTimeZoneOptions, visible, initialValue]);
+
+  useEffect(() => {
+    if (visible) {
+      setIsRendered(true);
+      Animated.timing(slideAnimation, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.inOut(Easing.circle),
+        useNativeDriver: true,
+      }).start();
+      return;
+    }
+
+    Animated.timing(slideAnimation, {
+      toValue: 0,
+      duration: 180,
+      easing: Easing.inOut(Easing.circle),
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (finished) {
+        setIsRendered(false);
+      }
+    });
+  }, [slideAnimation, visible]);
 
   const reset = () => {
     setLabel('');
@@ -372,9 +414,19 @@ export function AddZoneOverlay({
     );
   };
 
-  if (!visible) {
+  if (!isRendered) {
     return null;
   }
+
+  const slideOffset = windowHeight + topInset;
+  const overlayTranslateY = slideAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-slideOffset, 0],
+  });
+  const backdropOpacity = slideAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  });
 
   return (
     <Box
@@ -391,8 +443,8 @@ export function AddZoneOverlay({
       <Pressable
         style={{
           position: 'absolute',
-          top: 0,
-          bottom: 0,
+          top: -topInset,
+          bottom: -bottomInset,
           left: 0,
           right: 0,
         }}
@@ -401,22 +453,33 @@ export function AddZoneOverlay({
           searchInputRef.current?.blur();
         }}
       >
-        <Box flex={1} backgroundColor="overlay" />
+        <Animated.View
+          style={{
+            flex: 1,
+            backgroundColor: theme.colors.overlay,
+            opacity: backdropOpacity,
+          }}
+        />
       </Pressable>
-      <Box
+      <AnimatedBox
         width="100%"
         backgroundColor="backgroundAlt"
         padding="l"
         zIndex={1}
         style={{
+          paddingTop: theme.spacing.l + topInset,
+          marginTop: -topInset,
+          borderBottomLeftRadius: theme.borderRadii.m,
+          borderBottomRightRadius: theme.borderRadii.m,
           shadowColor: '#000',
           shadowOpacity: 0.2,
           shadowRadius: 12,
           shadowOffset: { width: 0, height: 6 },
           elevation: 12,
+          transform: [{ translateY: overlayTranslateY }],
         }}
       >
-        <Text variant="heading2" color="text">
+        <Text variant="heading2" color="text" marginBottom="m">
           {headingText}
         </Text>
         <Box style={{ position: 'relative', zIndex: 2, marginTop: theme.spacing.xsPlus }}>
@@ -555,16 +618,16 @@ export function AddZoneOverlay({
           </Text>
         </Box>
 
-        {error ? (
-          <Box flexDirection="row" alignItems="center" marginTop="xsPlus" marginHorizontal="sPlus">
+        <Box flexDirection="row" alignItems="center" marginTop="xsPlus" marginHorizontal="sPlus">
+          {error ? (
             <Box marginRight="xs">
               <AlertTriangle size={12} color={theme.colors.danger} />
             </Box>
-            <Text variant="caption" color="danger">
-              {error}
-            </Text>
-          </Box>
-        ) : null}
+          ) : null}
+          <Text variant="caption" color="danger">
+            {error}
+          </Text>
+        </Box>
 
         <Box flexDirection="row" justifyContent="flex-end" marginTop="s">
           <Box marginRight="m">
@@ -600,7 +663,7 @@ export function AddZoneOverlay({
             }
           />
         </Box>
-      </Box>
+      </AnimatedBox>
       {isSearchFocused && dropdownAnchor ? (
         <Box
           borderWidth={1}

@@ -2,10 +2,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable } from 'react-native';
 import { useTheme } from '@shopify/restyle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
 import { Clock8, History, Pause, Play } from 'lucide-react-native';
+import { getIntlLocale } from './src/i18n/intlLocale';
+import { isSupportedLanguage } from './src/i18n/supportedLanguages';
 
 type UserTimeBarProps = {
   time: Date;
@@ -14,10 +17,13 @@ type UserTimeBarProps = {
 };
 
 export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
+  const { t, i18n } = useTranslation('timeBar');
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom;
   const barPaddingBottom = theme.spacing.xl + bottomInset;
+  const rawLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0].toLowerCase();
+  const intlLocale = getIntlLocale(isSupportedLanguage(rawLanguage) ? rawLanguage : 'en');
 
   const [resetDisabled, setResetDisabled] = useState(true);
   const isFrozen = !resetDisabled;
@@ -126,13 +132,13 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
         marginBottom="sPlus"
       >
         <Text variant="label" color="accent">
-          {formatUserDay(time)}
+          {formatUserDay(time, intlLocale)}
         </Text>
       </Box>
 
       <Box flexDirection="row" justifyContent="space-between" alignItems="center" width="100%">
         <Button
-          label="Reset"
+          label={t('reset')}
           variant="ghost"
           onPress={handleReset}
           disabled={resetDisabled}
@@ -173,7 +179,7 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
               }}
             />
             <Text variant="time" style={{ fontSize: 38 }} color="textSecondary">
-              {formatUserTime(time)}
+              {formatUserTime(time, intlLocale)}
             </Text>
             <Animated.View
               pointerEvents="none"
@@ -212,7 +218,7 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
         </Pressable>
 
         <Button
-          label="Set"
+          label={t('set')}
           onPress={handleSet}
           variant="primary"
           size="sm"
@@ -226,16 +232,16 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
   );
 }
 
-function formatUserTime(date: Date) {
-  return new Intl.DateTimeFormat('en-US', {
+function formatUserTime(date: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   }).format(date);
 }
 
-function formatUserDay(date: Date) {
-  return new Intl.DateTimeFormat('en-US', {
+function formatUserDay(date: Date, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
     weekday: 'short',
   }).format(date);
 }

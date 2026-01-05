@@ -1,0 +1,376 @@
+﻿<!doctype html>
+<html lang="en" data-theme="light" data-embedded="false" data-show-language-switcher="false">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy - Team Zones</title>
+    <style id="policy-styles">
+      :root[data-theme='light'] {
+        --bg: #f5f7fb;
+        --bg-alt: #edf2fb;
+        --card: #ffffff;
+        --card-border: #d5dbe8;
+        --text: #0b132b;
+        --text-secondary: #1f2a44;
+        --muted: #5c6883;
+        --accent: #557fa6;
+        --primary: #7b205c;
+        --shadow: 0 14px 40px rgba(17, 34, 68, 0.08);
+      }
+      :root[data-theme='dark'] {
+        --bg: #0b132b;
+        --bg-alt: #0e152a;
+        --card: #1c2541;
+        --card-border: rgba(255, 255, 255, 0.08);
+        --text: #ffffff;
+        --text-secondary: #e0fbfc;
+        --muted: #6b7a99;
+        --accent: #98c1d9;
+        --primary: #5f0f40;
+        --shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+      }
+
+      :root {
+        color-scheme: light;
+      }
+      :root[data-theme='dark'] {
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        margin: 0;
+        background: radial-gradient(circle at 10% 10%, var(--bg-alt), var(--bg));
+        color: var(--text);
+      }
+      .page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 32px 16px 40px;
+      }
+      .card {
+        width: min(880px, 100%);
+        background: var(--card);
+        border: 1px solid var(--card-border);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        padding: 28px 32px 32px;
+      }
+      header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 18px;
+        gap: 12px;
+      }
+      h1 {
+        font-size: 26px;
+        letter-spacing: 0.2px;
+        margin: 0;
+        color: var(--text-secondary);
+      }
+      h2 {
+        font-size: 20px;
+        margin: 28px 0 10px;
+        color: var(--accent);
+      }
+      p,
+      ul {
+        margin: 0 0 14px;
+        line-height: 1.6;
+        color: var(--text);
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin-bottom: 6px;
+        color: var(--text-secondary);
+      }
+      .meta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .controls {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .lang-switcher {
+        display: none;
+        align-items: center;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 999px;
+        border: 1px solid var(--card-border);
+        background: var(--bg-alt);
+      }
+      :root[data-show-language-switcher='true'] .lang-switcher {
+        display: inline-flex;
+      }
+      .lang-switcher a {
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        color: var(--text);
+        padding: 6px 10px;
+        border-radius: 999px;
+        text-decoration: none;
+        transition:
+          background 120ms ease,
+          color 120ms ease,
+          transform 120ms ease,
+          opacity 120ms ease;
+      }
+      .lang-switcher a[aria-current='true'] {
+        background: var(--text);
+        color: var(--card);
+      }
+      .lang-switcher a:hover {
+        transform: translateY(-1px);
+      }
+      .lang-switcher a:active {
+        transform: translateY(0);
+        opacity: 0.92;
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--card-border);
+        background: var(--bg-alt);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+        transition:
+          transform 120ms ease,
+          opacity 120ms ease;
+        text-decoration: none;
+        user-select: none;
+      }
+      .toggle:hover {
+        transform: translateY(-1px);
+      }
+      .toggle:active {
+        transform: translateY(0);
+        opacity: 0.92;
+      }
+      footer {
+        margin-top: 26px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+    <style id="policy-embed">
+      :root[data-embedded='true'] header {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <main class="card">
+        <header>
+          <div>
+            <h1>Privacy Policy</h1>
+          </div>
+          <div class="controls">
+            <nav class="lang-switcher" aria-label="Language">
+              <a href="privacy-policy.en.html" data-lang="en">English</a>
+              <a href="privacy-policy.pl.html" data-lang="pl">Polski</a>
+              <a href="privacy-policy.ja.html" data-lang="ja">日本語</a>
+            </nav>
+            <button class="toggle" type="button" id="theme-toggle" aria-label="Toggle theme">
+              <span id="theme-label">Light</span>
+            </button>
+          </div>
+        </header>
+
+        <p class="meta">
+          <strong>Effective date:</strong>
+          <span>2025/12/29</span>
+        </p>
+
+        <p>
+          Team Zones respects your privacy. The app does not collect, store, transmit, or share any
+          personal data.
+        </p>
+
+        <h2>What the app uses</h2>
+        <p>Team Zones only accesses:</p>
+        <ul>
+          <li>The current time of your device</li>
+          <li>The system light/dark appearance setting</li>
+        </ul>
+        <p>This information is used solely to display time correctly and adjust the app's theme.</p>
+
+        <h2>What the app does not do</h2>
+        <ul>
+          <li>No account creation or login is required</li>
+          <li>No personal information is collected</li>
+          <li>No data is sent over the internet</li>
+          <li>No external APIs or services are called</li>
+          <li>No analytics, tracking, or ads are used</li>
+          <li>No data is shared with third parties</li>
+        </ul>
+
+        <h2>Data storage</h2>
+        <p>
+          All app data (such as added time zones or names) is stored locally on your device only.
+        </p>
+
+        <h2>Contact</h2>
+        <p>
+          If you have any questions about this privacy policy, you can contact the developer at:
+          <br />
+          <strong><a id="contact-email" rel="nofollow noopener">Loading…</a></strong>
+        </p>
+
+        <footer>&copy; Team Zones</footer>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        const root = document.documentElement;
+        const params = new URLSearchParams(window.location.search);
+        const isEmbedded = root.getAttribute('data-embedded') === 'true';
+        const showLang = params.get('showLang') === '1' || params.get('showLang') === 'true';
+
+        if (showLang && !isEmbedded) {
+          root.setAttribute('data-show-language-switcher', 'true');
+        }
+
+        const langKey = 'tz:policy-lang';
+        const supported = ['en', 'pl', 'ja'];
+        const currentLang = (root.getAttribute('lang') || 'en').toLowerCase();
+
+        function normalizeLang(value) {
+          if (!value) return null;
+          const normalized = value.toLowerCase().split('-')[0];
+          return supported.indexOf(normalized) >= 0 ? normalized : null;
+        }
+
+        function getStoredLang() {
+          try {
+            return normalizeLang(localStorage.getItem(langKey));
+          } catch (e) {
+            return null;
+          }
+        }
+
+        function getBrowserLang() {
+          const languages = Array.isArray(navigator.languages)
+            ? navigator.languages
+            : [navigator.language];
+          for (const lang of languages) {
+            const normalized = normalizeLang(lang);
+            if (normalized) {
+              return normalized;
+            }
+          }
+          return null;
+        }
+
+        function buildUrl(lang) {
+          const search = window.location.search || '';
+          const hash = window.location.hash || '';
+          return `privacy-policy.${lang}.html${search}${hash}`;
+        }
+
+        if (showLang && !isEmbedded) {
+          const storedLang = getStoredLang();
+          const preferredLang = storedLang || getBrowserLang() || 'en';
+
+          if (preferredLang && preferredLang !== currentLang) {
+            try {
+              localStorage.setItem(langKey, preferredLang);
+            } catch (e) {}
+            window.location.replace(buildUrl(preferredLang));
+            return;
+          }
+
+          const langLinks = document.querySelectorAll('.lang-switcher [data-lang]');
+          langLinks.forEach((link) => {
+            const linkLang = link.getAttribute('data-lang');
+            if (linkLang === currentLang) {
+              link.setAttribute('aria-current', 'true');
+            } else {
+              link.removeAttribute('aria-current');
+            }
+            link.addEventListener('click', (event) => {
+              event.preventDefault();
+              const nextLang = link.getAttribute('data-lang');
+              if (!nextLang) {
+                return;
+              }
+              try {
+                localStorage.setItem(langKey, nextLang);
+              } catch (e) {}
+              if (nextLang !== currentLang) {
+                window.location.href = buildUrl(nextLang);
+              }
+            });
+          });
+        }
+
+        const prefersDark =
+          window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const storedTheme = localStorage.getItem('tz:policy-theme');
+        const toggle = document.getElementById('theme-toggle');
+        const label = document.getElementById('theme-label');
+
+        function apply(theme) {
+          root.setAttribute('data-theme', theme);
+          root.style.colorScheme = theme;
+          if (label) {
+            label.textContent = theme === 'dark' ? 'Dark' : 'Light';
+          }
+        }
+
+        const initial =
+          storedTheme === 'light' || storedTheme === 'dark'
+            ? storedTheme
+            : prefersDark
+              ? 'dark'
+              : 'light';
+        apply(initial);
+
+        if (toggle) {
+          toggle.addEventListener('click', () => {
+            const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            apply(next);
+            localStorage.setItem('tz:policy-theme', next);
+          });
+        }
+
+        const emailEl = document.getElementById('contact-email');
+        if (emailEl) {
+          const user = 'raz+team-zones';
+          const domain = 'razart.pl';
+          const address = `${user}@${domain}`;
+          emailEl.textContent = address;
+          emailEl.href = `mailto:${address}`;
+        }
+      })();
+    </script>
+  </body>
+</html>

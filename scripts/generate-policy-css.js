@@ -122,6 +122,46 @@ li {
   font-size: 14px;
   color: var(--muted);
 }
+.controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.lang-switcher {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  background: var(--bg-alt);
+}
+:root[data-show-language-switcher='true'] .lang-switcher {
+  display: inline-flex;
+}
+.lang-switcher a {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease, opacity 120ms ease;
+}
+.lang-switcher a[aria-current='true'] {
+  background: var(--text);
+  color: var(--card);
+}
+.lang-switcher a:hover {
+  transform: translateY(-1px);
+}
+.lang-switcher a:active {
+  transform: translateY(0);
+  opacity: 0.92;
+}
 .toggle {
   display: inline-flex;
   align-items: center;
@@ -187,6 +227,21 @@ function writeCssIntoHtml(htmlPath, css) {
   }
 }
 
+function getPolicyHtmlPaths() {
+  const docsDir = path.join(__dirname, '..', 'docs');
+  const entries = fs.readdirSync(docsDir, { withFileTypes: true });
+
+  return entries
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        entry.name.startsWith('privacy-policy.') &&
+        entry.name.endsWith('.html') &&
+        entry.name !== 'privacy-policy.html',
+    )
+    .map((entry) => path.join(docsDir, entry.name));
+}
+
 function main() {
   const { lightTheme, darkTheme } = loadTsModule(
     path.join(__dirname, '..', 'src', 'theme', 'themes.ts'),
@@ -197,9 +252,15 @@ function main() {
   }
 
   const css = buildCss(lightTheme, darkTheme);
-  const htmlPath = path.join(__dirname, '..', 'docs', 'privacy-policy.html');
-  writeCssIntoHtml(htmlPath, css);
-  console.log(`Inlined policy styles into ${htmlPath}`);
+  const htmlPaths = getPolicyHtmlPaths();
+  if (htmlPaths.length === 0) {
+    throw new Error('No localized privacy policy HTML files found in docs/');
+  }
+
+  htmlPaths.forEach((htmlPath) => {
+    writeCssIntoHtml(htmlPath, css);
+    console.log(`Inlined policy styles into ${htmlPath}`);
+  });
 }
 
 main();

@@ -1,16 +1,38 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Modal, Pressable, useWindowDimensions } from 'react-native';
+import {
+  ActivityIndicator,
+  Animated,
+  Easing,
+  Modal,
+  Pressable,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { useTheme } from '@shopify/restyle';
 import { X } from 'lucide-react-native';
 import { Asset } from 'expo-asset';
+import { useTranslation } from 'react-i18next';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
 
-const privacyPolicyHtmlModule = require('./docs/privacy-policy.html');
-const privacyPolicyHtml = Asset.fromModule(privacyPolicyHtmlModule);
+const privacyPolicyModules = {
+  en: require('./docs/privacy-policy.en.html'),
+  pl: require('./docs/privacy-policy.pl.html'),
+  ja: require('./docs/privacy-policy.ja.html'),
+} as const;
+
+const resolvePrivacyPolicyModule = (language?: string | null) => {
+  const normalized = (language ?? '').split('-')[0].toLowerCase();
+  if (normalized === 'pl') {
+    return privacyPolicyModules.pl;
+  }
+  if (normalized === 'ja') {
+    return privacyPolicyModules.ja;
+  }
+  return privacyPolicyModules.en;
+};
 
 type PrivacyPolicyModalProps = {
   visible: boolean;
@@ -23,10 +45,16 @@ export function PrivacyPolicyModal({
   onClose,
   themeMode = 'light',
 }: PrivacyPolicyModalProps) {
+  const { t, i18n } = useTranslation('privacy');
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const webViewRef = useRef<WebView>(null);
+  const policyModule = useMemo(
+    () => resolvePrivacyPolicyModule(i18n.resolvedLanguage ?? i18n.language),
+    [i18n.language, i18n.resolvedLanguage],
+  );
+  const policyAsset = useMemo(() => Asset.fromModule(policyModule), [policyModule]);
   const [policyUri, setPolicyUri] = useState<string | null>(null);
   const [isContentReady, setIsContentReady] = useState(false);
   const [isRendered, setIsRendered] = useState(visible);
@@ -39,19 +67,19 @@ export function PrivacyPolicyModal({
 
     (async () => {
       try {
-        const [htmlAsset] = await Asset.loadAsync([privacyPolicyHtmlModule]);
+        const [htmlAsset] = await Asset.loadAsync([policyModule]);
         if (cancelled) return;
         setPolicyUri(htmlAsset.localUri || htmlAsset.uri);
       } catch {
         if (cancelled) return;
-        setPolicyUri(privacyPolicyHtml.uri);
+        setPolicyUri(policyAsset.uri);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [visible]);
+  }, [policyAsset, policyModule, visible]);
 
   const injectedTheme = useMemo(() => {
     return `
@@ -149,7 +177,10 @@ export function PrivacyPolicyModal({
             transform: [{ translateY }],
           }}
         >
-          <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['bottom']}>
+          <SafeAreaView
+            style={{ flex: 1, backgroundColor: theme.colors.background }}
+            edges={['bottom']}
+          >
             <Box flex={1} backgroundColor="background">
               <Box
                 flexDirection="row"
@@ -162,11 +193,11 @@ export function PrivacyPolicyModal({
                 backgroundColor="background"
               >
                 <Text variant="heading2" color="textSecondary">
-                  Privacy Policy
+                  {t('title')}
                 </Text>
                 <Button
                   iconOnly
-                  accessibilityLabel="Close privacy policy"
+                  accessibilityLabel={t('closeLabel')}
                   onPress={onClose}
                   iconOnlySize={36}
                   radius="xl"
@@ -180,7 +211,7 @@ export function PrivacyPolicyModal({
               <WebView
                 ref={webViewRef}
                 originWhitelist={['*']}
-                source={policyUri ? { uri: policyUri } : privacyPolicyHtmlModule}
+                source={policyUri ? { uri: policyUri } : policyModule}
                 style={{ flex: 1, backgroundColor: theme.colors.background }}
                 allowFileAccess
                 allowFileAccessFromFileURLs

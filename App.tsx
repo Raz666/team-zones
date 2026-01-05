@@ -54,6 +54,7 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
 
 export default function App() {
   const STORAGE_KEY = 'teamzones:zones:v1';
+  const THEME_STORAGE_KEY = 'teamzones:theme:v1';
   const [mode, setMode] = useState<'light' | 'dark'>('dark');
   const theme: AppTheme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);
   const isDark = mode === 'dark';
@@ -61,6 +62,7 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(() => new Date());
   const [zones, setZones] = useState<ZoneGroup[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [themeHydrated, setThemeHydrated] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -105,11 +107,33 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    (async () => {
+      try {
+        const storedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (storedTheme === 'dark' || storedTheme === 'light') {
+          setMode(storedTheme);
+        }
+      } catch (err) {
+        console.warn('Failed to load saved theme', err);
+      } finally {
+        setThemeHydrated(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
     if (!hydrated) return;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(zones)).catch((err) => {
       console.warn('Failed to save zones', err);
     });
   }, [zones, hydrated]);
+
+  useEffect(() => {
+    if (!themeHydrated) return;
+    AsyncStorage.setItem(THEME_STORAGE_KEY, mode).catch((err) => {
+      console.warn('Failed to save theme', err);
+    });
+  }, [mode, themeHydrated]);
 
   useEffect(() => {
     if (showForm || showPrivacyPolicy) {

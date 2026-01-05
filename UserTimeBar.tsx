@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Pressable } from 'react-native';
 import { useTheme } from '@shopify/restyle';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
@@ -14,6 +15,9 @@ type UserTimeBarProps = {
 
 export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
   const theme = useTheme<AppTheme>();
+  const insets = useSafeAreaInsets();
+  const bottomInset = insets.bottom;
+  const barPaddingBottom = theme.spacing.xl + bottomInset;
 
   const [resetDisabled, setResetDisabled] = useState(true);
   const isFrozen = !resetDisabled;
@@ -106,14 +110,13 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
       position="absolute"
       left={0}
       right={0}
-      bottom={0}
       paddingHorizontal="l"
       paddingTop="sPlus"
-      paddingBottom="xl"
       backgroundColor="backgroundAlt"
       borderTopWidth={1}
       borderTopColor="borderSubtle"
       alignItems="center"
+      style={{ paddingBottom: barPaddingBottom, bottom: -bottomInset }}
     >
       <Box
         paddingHorizontal="sPlus"

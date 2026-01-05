@@ -655,7 +655,6 @@ export default function App() {
             <UserTimeBar
               time={currentTime}
               onChange={() => {
-                setCurrentTime(new Date());
                 setPaused(true);
                 setShowPicker(true);
               }}

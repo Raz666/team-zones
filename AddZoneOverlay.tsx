@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, FlatList, Pressable, TextInput, View } from 'react-native';
 import { useTheme } from '@shopify/restyle';
-import { ArrowUp, Check, Plus, X } from 'lucide-react-native';
+import { AlertTriangle, ArrowUp, Check, Plus, X } from 'lucide-react-native';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
@@ -71,6 +71,7 @@ export function AddZoneOverlay({
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [labelWasCleared, setLabelWasCleared] = useState(false);
   const searchInputRef = useRef<TextInput>(null);
   const searchAnchorRef = useRef<View>(null);
   const overlayRef = useRef<View>(null);
@@ -195,6 +196,7 @@ export function AddZoneOverlay({
       setSearch(option.label);
       setError('');
       setIsSearchFocused(false);
+      setLabelWasCleared(false);
       return;
     }
     if (skipResetOnClearRef.current) {
@@ -207,6 +209,7 @@ export function AddZoneOverlay({
     setSearch('');
     setError('');
     setIsSearchFocused(false);
+    setLabelWasCleared(false);
   }, [allTimeZoneOptions, visible, initialValue]);
 
   const reset = () => {
@@ -215,6 +218,7 @@ export function AddZoneOverlay({
     setMembersInput('');
     setSearch('');
     setError('');
+    setLabelWasCleared(false);
   };
 
   const handleSubmit = (insertAtStart = false) => {
@@ -222,6 +226,16 @@ export function AddZoneOverlay({
     const trimmedTimeZone = normalizeTimeZoneId(timeZone.trim());
     if (!trimmedLabel || !trimmedTimeZone) {
       setError('Select a time zone and provide a label.');
+      return;
+    }
+    if (isLabelTooLong || isMembersTooLong) {
+      if (isLabelTooLong && isMembersTooLong) {
+        setError('Shorten the label and list of members to continue.');
+      } else if (isLabelTooLong) {
+        setError(`Shorten the label to continue.`);
+      } else {
+        setError(`Shorten the list of members to continue.`);
+      }
       return;
     }
     try {
@@ -238,7 +252,7 @@ export function AddZoneOverlay({
     const submitAction = insertAtStart && !isEdit && onSubmitAtStart ? onSubmitAtStart : onSubmit;
 
     submitAction({
-      label: trimmedLabel,
+      label,
       timeZone: trimmedTimeZone,
       members: members.length ? members : undefined,
     });
@@ -312,8 +326,14 @@ export function AddZoneOverlay({
     searchInputRef.current?.focus();
   };
 
-  const headingText = isEdit ? 'Edit Time Zone' : 'Add Time Zone';
+  const headingText = isEdit ? 'Edit time zone' : 'Add time zone';
   const submitLabel = isEdit ? 'Save' : 'Add';
+  const labelLimit = 25;
+  const membersLimit = 50;
+  const labelLength = label.length;
+  const membersLength = membersInput.length;
+  const isLabelTooLong = labelLength > labelLimit;
+  const isMembersTooLong = membersLength > membersLimit;
 
   const inputStyle = {
     backgroundColor: theme.colors.card,
@@ -467,6 +487,11 @@ export function AddZoneOverlay({
           style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={label}
           onChangeText={(text) => {
+            if (label.length > 0 && text.length === 0) {
+              setLabelWasCleared(true);
+            } else if (text.length > 0) {
+              setLabelWasCleared(false);
+            }
             setLabel(text);
             setError('');
           }}
@@ -474,20 +499,73 @@ export function AddZoneOverlay({
           placeholder="Label (auto-filled from city, editable)"
           placeholderTextColor={theme.colors.muted}
         />
+        <Box flexDirection="row" alignItems="center" marginTop="xsPlus" marginHorizontal="sPlus">
+          {isLabelTooLong ? (
+            <Box flex={1} flexDirection="row" alignItems="center">
+              <Box marginRight="xs">
+                <AlertTriangle size={12} color={theme.colors.danger} />
+              </Box>
+              <Text variant="caption" color="danger">
+                Max {labelLimit} characters.
+              </Text>
+            </Box>
+          ) : labelWasCleared ? (
+            <Box flex={1} flexDirection="row" alignItems="center">
+              <Box marginRight="xs">
+                <AlertTriangle size={12} color={theme.colors.danger} />
+              </Box>
+              <Text variant="caption" color="danger">
+                Please provide a label.
+              </Text>
+            </Box>
+          ) : (
+            <Box flex={1} />
+          )}
+          <Text variant="caption" color={isLabelTooLong || labelWasCleared ? 'danger' : 'muted'}>
+            {labelLength}/{labelLimit}
+          </Text>
+        </Box>
         <TextInput
           style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={membersInput}
-          onChangeText={setMembersInput}
+          onChangeText={(text) => {
+            setMembersInput(text);
+            setError('');
+          }}
           onFocus={() => setIsSearchFocused(false)}
           placeholder="Members comma-separated (optional)"
           placeholderTextColor={theme.colors.muted}
           autoCapitalize="words"
         />
-        {error ? (
-          <Text variant="caption" color="danger" marginTop="xsPlus">
-            {error}
+        <Box flexDirection="row" alignItems="center" marginTop="xsPlus" marginHorizontal="sPlus">
+          {isMembersTooLong ? (
+            <Box flex={1} flexDirection="row" alignItems="center">
+              <Box marginRight="xs">
+                <AlertTriangle size={12} color={theme.colors.danger} />
+              </Box>
+              <Text variant="caption" color="danger">
+                Max {membersLimit} characters.
+              </Text>
+            </Box>
+          ) : (
+            <Box flex={1} />
+          )}
+          <Text variant="caption" color={isMembersTooLong ? 'danger' : 'muted'}>
+            {membersLength}/{membersLimit}
           </Text>
+        </Box>
+
+        {error ? (
+          <Box flexDirection="row" alignItems="center" marginTop="xsPlus" marginHorizontal="sPlus">
+            <Box marginRight="xs">
+              <AlertTriangle size={12} color={theme.colors.danger} />
+            </Box>
+            <Text variant="caption" color="danger">
+              {error}
+            </Text>
+          </Box>
         ) : null}
+
         <Box flexDirection="row" justifyContent="flex-end" marginTop="s">
           <Box marginRight="m">
             <Button

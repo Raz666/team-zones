@@ -14,7 +14,7 @@ import { dayTagForZone, normalizeTimeZoneId, weekdayInZone } from './timeZoneUti
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
-import { FileText, Plus, Sun, Moon, Menu, Edit, Trash2 } from 'lucide-react-native';
+import { FileText, Plus, Sun, Moon, Menu, Edit, Trash2, X } from 'lucide-react-native';
 
 type ZoneGroup = {
   label: string;
@@ -69,6 +69,7 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const [draftIndex, setDraftIndex] = useState<number | null>(null);
   const [formOrigin, setFormOrigin] = useState<'add' | 'edit'>('add');
   const [exitArmed, setExitArmed] = useState(false);
@@ -126,6 +127,10 @@ export default function App() {
       if (showForm || showPrivacyPolicy) {
         return false;
       }
+      if (pendingDeleteIndex !== null) {
+        setPendingDeleteIndex(null);
+        return true;
+      }
       if (showMenu) {
         setShowMenu(false);
         return true;
@@ -147,7 +152,7 @@ export default function App() {
       return true;
     });
     return () => subscription.remove();
-  }, [showForm, showPrivacyPolicy, showMenu]);
+  }, [pendingDeleteIndex, showForm, showPrivacyPolicy, showMenu]);
 
   useEffect(() => {
     return () => {
@@ -292,7 +297,8 @@ export default function App() {
     };
 
     const handleDelete = () => {
-      deleteZone(index);
+      setPendingDeleteIndex(index);
+      setActionIndex(null);
     };
 
     const wasVisible = actionVisibility.current[index] || false;
@@ -377,9 +383,11 @@ export default function App() {
               alignItems="center"
               marginBottom="xsPlus"
             >
-              <Text variant="subtitle" color="textSecondary">
-                {item.label}
-              </Text>
+              <Box flex={1} marginRight="s">
+                <Text variant="subtitle" color="textSecondary" numberOfLines={2}>
+                  {item.label}
+                </Text>
+              </Box>
               <Box
                 paddingHorizontal="sPlus"
                 paddingVertical="xs"
@@ -398,15 +406,27 @@ export default function App() {
               marginBottom="xsPlus"
             >
               <Text variant="time">{info.time}</Text>
-              {item.members && item.members.length > 0 ? (
-                <Text variant="body" color="textSecondary">
-                  {item.members.join(' • ')}
-                </Text>
-              ) : (
-                <Text variant="caption" color="muted">
-                  No members listed
-                </Text>
-              )}
+              <Box flex={1} alignItems="flex-end" marginLeft="m">
+                {item.members && item.members.length > 0 ? (
+                  <Text
+                    variant="body"
+                    color="textSecondary"
+                    numberOfLines={2}
+                    style={{ textAlign: 'right' }}
+                  >
+                    {item.members.join(' • ')}
+                  </Text>
+                ) : (
+                  <Text
+                    variant="caption"
+                    color="muted"
+                    numberOfLines={2}
+                    style={{ textAlign: 'right' }}
+                  >
+                    No members listed
+                  </Text>
+                )}
+              </Box>
             </Box>
           </Box>
         </Pressable>
@@ -622,6 +642,76 @@ export default function App() {
                   </Text>
                 </Box>
               </Box>
+            ) : null}
+            {pendingDeleteIndex !== null ? (
+              <Pressable
+                onPress={() => setPendingDeleteIndex(null)}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 4,
+                }}
+              >
+                <Box flex={1} backgroundColor="overlay" justifyContent="center" alignItems="center">
+                  <Pressable
+                    onPress={() => {}}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.98 : 1, width: '100%' })}
+                  >
+                    <Box
+                      marginHorizontal="l"
+                      backgroundColor="card"
+                      borderRadius="l"
+                      borderWidth={1}
+                      borderColor="borderSubtle"
+                      padding="l"
+                      style={{
+                        shadowColor: '#000',
+                        shadowOpacity: 0.2,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 6 },
+                        elevation: 10,
+                      }}
+                    >
+                      <Text variant="heading2" color="text">
+                        Delete zone?
+                      </Text>
+                      <Box marginTop="xsPlus">
+                        <Text variant="body" color="textSecondary" marginVertical="l">
+                          This will remove {zones[pendingDeleteIndex]?.label ?? 'this zone'} from
+                          your list.
+                        </Text>
+                      </Box>
+                      <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
+                        <Box marginRight="m">
+                          <Button
+                            label="Cancel"
+                            variant="ghost"
+                            size="sm"
+                            onPress={() => setPendingDeleteIndex(null)}
+                            icon={<X size={14} color={theme.colors.text} />}
+                          />
+                        </Box>
+                        <Button
+                          label="Delete"
+                          size="sm"
+                          onPress={() => {
+                            if (pendingDeleteIndex !== null) {
+                              deleteZone(pendingDeleteIndex);
+                              setPendingDeleteIndex(null);
+                            }
+                          }}
+                          backgroundColor="danger"
+                          borderColor="danger"
+                          icon={<Trash2 size={14} color={theme.colors.textInverse} />}
+                        />
+                      </Box>
+                    </Box>
+                  </Pressable>
+                </Box>
+              </Pressable>
             ) : null}
 
             <AddZoneOverlay

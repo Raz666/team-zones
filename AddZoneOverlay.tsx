@@ -12,6 +12,7 @@ import {
 import { useTheme } from '@shopify/restyle';
 import { AlertTriangle, ArrowUp, Check, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import type { AppTheme } from './src/theme/themes';
 import { Box, Button, Text } from './src/theme/components';
@@ -76,6 +77,7 @@ export function AddZoneOverlay({
   onSubmitAtStart,
   onClose,
 }: AddZoneOverlayProps) {
+  const { t } = useTranslation('addZone');
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom;
@@ -267,27 +269,27 @@ export function AddZoneOverlay({
     const trimmedLabel = label.trim();
     const trimmedTimeZone = normalizeTimeZoneId(timeZone.trim());
     if (!trimmedLabel || !trimmedTimeZone) {
-      setError('Select a time zone and provide a label.');
+      setError(t('errors.missingSelection'));
       return;
     }
     if (isLabelTooLong || isMembersTooLong) {
       if (isLabelTooLong && isMembersTooLong) {
-        setError('Shorten the label and list of members to continue.');
+        setError(t('errors.shortenLabelAndMembers'));
       } else if (isLabelTooLong) {
-        setError(`Shorten the label to continue.`);
+        setError(t('errors.shortenLabel'));
       } else {
-        setError(`Shorten the list of members to continue.`);
+        setError(t('errors.shortenMembers'));
       }
       return;
     }
     try {
       new Intl.DateTimeFormat('en-US', { timeZone: trimmedTimeZone }).format(new Date());
     } catch {
-      setError('Invalid time zone id. Use IANA names like America/New_York.');
+      setError(t('errors.invalidTimeZone'));
       return;
     }
     const members = membersInput
-      .split(',')
+      .split(/[,\uFF0C\u3001\uFF64\uFE10\uFE50\uFE51\u060C]/)
       .map((m) => m.trim())
       .filter(Boolean);
 
@@ -368,8 +370,8 @@ export function AddZoneOverlay({
     searchInputRef.current?.focus();
   };
 
-  const headingText = isEdit ? 'Edit time zone' : 'Add time zone';
-  const submitLabel = isEdit ? 'Save' : 'Add';
+  const headingText = isEdit ? t('heading.edit') : t('heading.add');
+  const submitLabel = isEdit ? t('buttons.save') : t('buttons.add');
   const labelLimit = 25;
   const membersLimit = 50;
   const labelLength = label.length;
@@ -517,7 +519,7 @@ export function AddZoneOverlay({
                 setIsSearchFocused(true);
                 updateDropdownAnchor();
               }}
-              placeholder="Search time zone id (e.g., Europe/Paris)"
+              placeholder={t('placeholders.search')}
               placeholderTextColor={theme.colors.muted}
               autoCapitalize="none"
             />
@@ -559,7 +561,7 @@ export function AddZoneOverlay({
             setError('');
           }}
           onFocus={() => setIsSearchFocused(false)}
-          placeholder="Label (auto-filled from city, editable)"
+          placeholder={t('placeholders.label')}
           placeholderTextColor={theme.colors.muted}
         />
         <Box flexDirection="row" alignItems="center" marginTop="xsPlus" marginHorizontal="sPlus">
@@ -569,7 +571,7 @@ export function AddZoneOverlay({
                 <AlertTriangle size={12} color={theme.colors.danger} />
               </Box>
               <Text variant="caption" color="danger">
-                Max {labelLimit} characters.
+                {t('errors.maxCharacters', { limit: labelLimit })}
               </Text>
             </Box>
           ) : labelWasCleared ? (
@@ -578,7 +580,7 @@ export function AddZoneOverlay({
                 <AlertTriangle size={12} color={theme.colors.danger} />
               </Box>
               <Text variant="caption" color="danger">
-                Please provide a label.
+                {t('errors.provideLabel')}
               </Text>
             </Box>
           ) : (
@@ -596,7 +598,7 @@ export function AddZoneOverlay({
             setError('');
           }}
           onFocus={() => setIsSearchFocused(false)}
-          placeholder="Members comma-separated (optional)"
+          placeholder={t('placeholders.members')}
           placeholderTextColor={theme.colors.muted}
           autoCapitalize="words"
         />
@@ -607,7 +609,7 @@ export function AddZoneOverlay({
                 <AlertTriangle size={12} color={theme.colors.danger} />
               </Box>
               <Text variant="caption" color="danger">
-                Max {membersLimit} characters.
+                {t('errors.maxCharacters', { limit: membersLimit })}
               </Text>
             </Box>
           ) : (
@@ -629,39 +631,47 @@ export function AddZoneOverlay({
           </Text>
         </Box>
 
-        <Box flexDirection="row" justifyContent="flex-end" marginTop="s">
-          <Box marginRight="m">
+        <Box
+          flexDirection="row"
+          justifyContent="flex-end"
+          marginTop="s"
+          flexWrap="wrap-reverse"
+          gap="m"
+        >
+          <Box>
             <Button
-              label="Cancel"
+              label={t('buttons.cancel')}
               size="sm"
               variant="ghost"
               onPress={handleCancel}
               icon={<X size={14} color={theme.colors.text} />}
             />
           </Box>
-          {!isEdit && existingZones.length > 0 ? (
-            <Box marginRight="m">
-              <Button
-                label="Add to top"
-                size="sm"
-                variant="ghost"
-                onPress={() => handleSubmit(true)}
-                icon={<ArrowUp size={14} color={theme.colors.text} />}
-              />
-            </Box>
-          ) : null}
-          <Button
-            label={submitLabel}
-            size="sm"
-            onPress={() => handleSubmit(false)}
-            icon={
-              submitLabel === 'Add' ? (
-                <Plus size={16} color={theme.colors.textInverse} />
-              ) : (
-                <Check size={16} color={theme.colors.textInverse} />
-              )
-            }
-          />
+          <Box flexDirection="row" justifyContent="flex-end" flexWrap="wrap-reverse" gap="m">
+            {!isEdit && existingZones.length > 0 ? (
+              <Box>
+                <Button
+                  label={t('buttons.addToTop')}
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => handleSubmit(true)}
+                  icon={<ArrowUp size={14} color={theme.colors.text} />}
+                />
+              </Box>
+            ) : null}
+            <Button
+              label={submitLabel}
+              size="sm"
+              onPress={() => handleSubmit(false)}
+              icon={
+                isEdit ? (
+                  <Check size={16} color={theme.colors.textInverse} />
+                ) : (
+                  <Plus size={16} color={theme.colors.textInverse} />
+                )
+              }
+            />
+          </Box>
         </Box>
       </AnimatedBox>
       {isSearchFocused && dropdownAnchor ? (
@@ -718,7 +728,7 @@ export function AddZoneOverlay({
                             backgroundColor="primarySoft"
                           >
                             <Text variant="label" color="textSecondary">
-                              Added
+                              {t('badge.added')}
                             </Text>
                           </Box>
                         ) : null}
@@ -739,7 +749,7 @@ export function AddZoneOverlay({
             ListEmptyComponent={
               <Box padding="m">
                 <Text variant="caption" color="muted">
-                  No unused time zones match.
+                  {t('list.empty')}
                 </Text>
               </Box>
             }

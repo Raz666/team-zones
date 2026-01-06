@@ -1,1 +1,32 @@
-{}
+{
+  "heading": {
+    "add": "Add time zone",
+    "edit": "Edit time zone"
+  },
+  "buttons": {
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "addToTop": "Add to top"
+  },
+  "placeholders": {
+    "search": "Search city, country, or zone",
+    "label": "Give it a short name",
+    "members": "Your note (e.g. comma-separated teammates)"
+  },
+  "errors": {
+    "missingSelection": "Select a time zone and provide a label.",
+    "shortenLabelAndMembers": "Shorten the label and list of members to continue.",
+    "shortenLabel": "Shorten the label to continue.",
+    "shortenMembers": "Shorten the list of members to continue.",
+    "invalidTimeZone": "Invalid time zone id. Use IANA names like America/New_York.",
+    "maxCharacters": "Max {{limit}} characters?",
+    "provideLabel": "Please provide a label."
+  },
+  "list": {
+    "empty": "No unused time zones match."
+  },
+  "badge": {
+    "added": "Added"
+  }
+}

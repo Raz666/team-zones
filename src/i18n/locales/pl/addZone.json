@@ -1,1 +1,32 @@
-{}
+{
+  "heading": {
+    "add": "Dodaj strefę czasową",
+    "edit": "Edytuj strefę czasową"
+  },
+  "buttons": {
+    "add": "Dodaj",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "addToTop": "Dodaj na początek"
+  },
+  "placeholders": {
+    "search": "Szukaj po nazwie miasta, kraju lub strefy",
+    "label": "Nadaj własną nazwę",
+    "members": "Twoja notatka (np. lista osób z zespołu)"
+  },
+  "errors": {
+    "missingSelection": "Wybierz strefę czasową i podaj etykietę.",
+    "shortenLabelAndMembers": "Skróć etykietę i listę członków.",
+    "shortenLabel": "Skróć etykietę.",
+    "shortenMembers": "Skróć listę członków.",
+    "invalidTimeZone": "Nieprawidłowy identyfikator strefy. Użyj nazw IANA, np. America/New_York.",
+    "maxCharacters": "Maks. {{limit}} znaków.",
+    "provideLabel": "Podaj etykietę."
+  },
+  "list": {
+    "empty": "Brak nieużywanych stref pasujących do wyszukiwania."
+  },
+  "badge": {
+    "added": "Dodano"
+  }
+}

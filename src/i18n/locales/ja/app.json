@@ -1,1 +1,34 @@
-{}
+{
+  "title": "Team Zones",
+  "menu": {
+    "addZone": "新しいタイムゾーンを追加",
+    "lightTheme": "ライトテーマ",
+    "darkTheme": "ダークテーマ",
+    "privacy": "プライバシーポリシー",
+    "language": "言語"
+  },
+  "empty": {
+    "title": "まだゾーンがありません",
+    "subtitle": "最初の都市を追加して時差を確認しましょう。",
+    "cta": "タイムゾーンを追加"
+  },
+  "exitPrompt": "「戻る」ボタンを押すと終了します。",
+  "delete": {
+    "title": "ゾーンを削除しますか？",
+    "body": "{{label}} をリストから削除します。",
+    "fallback": "このゾーン",
+    "cancel": "キャンセル",
+    "confirm": "削除"
+  },
+  "actions": {
+    "edit": "編集",
+    "delete": "削除"
+  },
+  "members": {
+    "empty": "メンバーはまだいません"
+  },
+  "accessibility": {
+    "menuToggle": "メニューを切り替え",
+    "addTimeZone": "タイムゾーンを追加"
+  }
+}

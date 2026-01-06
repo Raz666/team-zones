@@ -7,15 +7,29 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { ThemeProvider } from '@shopify/restyle';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
+import { useTranslation } from 'react-i18next';
 
 import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
 import { UserTimeBar } from './UserTimeBar';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
-import { dayTagForZone, normalizeTimeZoneId, weekdayInZone } from './timeZoneUtils';
+import { dayTagForZone, normalizeTimeZoneId } from './timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';
-import { FileText, Plus, Sun, Moon, Menu, Edit, Trash2, X } from 'lucide-react-native';
+import {
+  FileText,
+  Plus,
+  Sun,
+  Moon,
+  Menu,
+  Edit,
+  Trash2,
+  X,
+  Languages,
+  Check,
+} from 'lucide-react-native';
+import { getIntlLocale } from './src/i18n/intlLocale';
+import { isSupportedLanguage } from './src/i18n/supportedLanguages';
 
 type ZoneGroup = {
   label: string;
@@ -27,17 +41,24 @@ type DayBadgeTag = 'yday' | 'today' | 'tomo';
 
 const AnimatedBox = Animated.createAnimatedComponent(Box);
 
-const timeFormatter = (tz: string) =>
-  new Intl.DateTimeFormat('en-US', {
+const timeFormatter = (locale: string, tz: string) =>
+  new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
     timeZone: normalizeTimeZoneId(tz),
   });
 
-function formatZone(now: Date, zone: ZoneGroup, deviceTimeZone: string) {
-  const time = timeFormatter(zone.timeZone).format(now);
-  const weekday = weekdayInZone(now, zone.timeZone);
+function formatWeekday(now: Date, zoneTimeZone: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    timeZone: normalizeTimeZoneId(zoneTimeZone),
+  }).format(now);
+}
+
+function formatZone(now: Date, zone: ZoneGroup, deviceTimeZone: string, locale: string) {
+  const time = timeFormatter(locale, zone.timeZone).format(now);
+  const weekday = formatWeekday(now, zone.timeZone, locale);
   const dayBadge = dayTagForZone(now, zone.timeZone, deviceTimeZone);
   return { time, weekday, dayBadge };
 }
@@ -56,6 +77,8 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
 function AppContent() {
   const STORAGE_KEY = 'teamzones:zones:v1';
   const THEME_STORAGE_KEY = 'teamzones:theme:v1';
+  const LANGUAGE_STORAGE_KEY = 'teamzones:language:v1';
+  const { t, i18n } = useTranslation('app');
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom;
   const topInset = insets.top;
@@ -72,6 +95,7 @@ function AppContent() {
   const [showPicker, setShowPicker] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
@@ -87,6 +111,9 @@ function AppContent() {
   const exitArmedRef = useRef(false);
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteModalAnimation = useRef(new Animated.Value(0)).current;
+  const rawLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0].toLowerCase();
+  const selectedLanguage = isSupportedLanguage(rawLanguage) ? rawLanguage : 'en';
+  const intlLocale = getIntlLocale(selectedLanguage);
 
   useEffect(() => {
     if (paused) return;
@@ -188,6 +215,10 @@ function AppContent() {
         setPendingDeleteIndex(null);
         return true;
       }
+      if (showLanguageModal) {
+        setShowLanguageModal(false);
+        return true;
+      }
       if (showMenu) {
         setShowMenu(false);
         return true;
@@ -209,7 +240,7 @@ function AppContent() {
       return true;
     });
     return () => subscription.remove();
-  }, [pendingDeleteIndex, showForm, showPrivacyPolicy, showMenu]);
+  }, [pendingDeleteIndex, showForm, showLanguageModal, showPrivacyPolicy, showMenu]);
 
   useEffect(() => {
     return () => {
@@ -242,33 +273,67 @@ function AppContent() {
     setShowForm(true);
   };
 
+  const languageOptions = [
+    { value: 'en', label: 'English', flag: '🇬🇧' },
+    { value: 'pl', label: 'Polski', flag: '🇵🇱' },
+    { value: 'ja', label: '日本語', flag: '🇯🇵' },
+  ];
+  const selectedLanguageOption =
+    languageOptions.find((option) => option.value === selectedLanguage) ?? languageOptions[0];
+
+  const handleLanguageSelect = (language: string) => {
+    setShowLanguageModal(false);
+    if (language !== selectedLanguage) {
+      i18n.changeLanguage(language).catch((error) => {
+        console.warn('Failed to change language', error);
+      });
+    }
+    AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language).catch((error) => {
+      console.warn('Failed to persist language selection', error);
+    });
+  };
+
   const toggleTheme = () => {
     setMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   const menuItems = [
     {
-      label: 'Add new zone',
-      icon: <Plus size={20} color={theme.colors.text} />,
+      label: t('menu.addZone'),
+      subLabel: undefined,
+      icon: <Plus size={18} color={theme.colors.text} />,
       onPress: () => {
         setShowMenu(false);
         openAddZone();
       },
     },
     {
-      label: isDark ? 'Light theme' : 'Dark theme',
+      label: isDark ? t('menu.lightTheme') : t('menu.darkTheme'),
+      subLabel: undefined,
       icon: isDark ? (
-        <Sun size={20} color={theme.colors.text} />
+        <Sun size={18} color={theme.colors.text} />
       ) : (
-        <Moon size={20} color={theme.colors.text} />
+        <Moon size={18} color={theme.colors.text} />
       ),
       onPress: () => {
         toggleTheme();
       },
     },
     {
-      label: 'Privacy policy',
-      icon: <FileText size={20} color={theme.colors.text} />,
+      label: t('menu.language'),
+      subLabel: selectedLanguageOption
+        ? `${selectedLanguageOption.flag} ${selectedLanguageOption.label}`
+        : undefined,
+      icon: <Languages size={18} color={theme.colors.text} />,
+      onPress: () => {
+        setShowMenu(false);
+        setShowLanguageModal(true);
+      },
+    },
+    {
+      label: t('menu.privacy'),
+      subLabel: undefined,
+      icon: <FileText size={18} color={theme.colors.text} />,
       onPress: () => {
         setShowMenu(false);
         setShowPrivacyPolicy(true);
@@ -343,7 +408,7 @@ function AppContent() {
     isActive,
     index,
   }: DragListRenderItemInfo<ZoneGroup>) {
-    const info = formatZone(currentTime, item, deviceTimeZone);
+    const info = formatZone(currentTime, item, deviceTimeZone, intlLocale);
     const isHover = hoverIndex === index && activeIndex !== null && activeIndex !== index;
     const showActions = actionIndex === index && !isActive;
     const actionAnimation =
@@ -490,7 +555,7 @@ function AppContent() {
                     numberOfLines={2}
                     style={{ textAlign: 'right' }}
                   >
-                    No members listed
+                    {t('members.empty')}
                   </Text>
                 )}
               </Box>
@@ -506,7 +571,7 @@ function AppContent() {
             marginTop="xsPlus"
           >
             <Button
-              label="Delete"
+              label={t('actions.delete')}
               variant="ghost"
               size="xs"
               labelVariant="body"
@@ -516,7 +581,7 @@ function AppContent() {
             />
             <Box width={theme.spacing.s} />
             <Button
-              label="Edit"
+              label={t('actions.edit')}
               variant="primary"
               size="xs"
               onPress={handleEdit}
@@ -562,12 +627,12 @@ function AppContent() {
             marginBottom="l"
             style={{ zIndex: 2, position: 'relative' }}
           >
-            <Text variant="heading2">Team Zones</Text>
+            <Text variant="heading2">{t('title')}</Text>
             <Box flexDirection="row" alignItems="center">
               <Box style={{ position: 'relative' }}>
                 <Button
                   iconOnly
-                  accessibilityLabel="Toggle menu"
+                  accessibilityLabel={t('accessibility.menuToggle')}
                   onPress={() => setShowMenu((prev) => !prev)}
                   variant="primary"
                   size="sm"
@@ -612,10 +677,26 @@ function AppContent() {
                           paddingVertical="lPlus"
                           borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
                           borderBottomColor="borderSubtle"
+                          style={{ minWidth: 0 }}
                         >
                           {item.icon}
                           <Box width={theme.spacing.sPlus} />
-                          <Text variant="subtitle">{item.label}</Text>
+                          <Box style={{ minWidth: 0, flexShrink: 1 }}>
+                            <Text variant="menuItem" style={{ flexShrink: 1 }}>
+                              {item.label}
+                            </Text>
+                            {item.subLabel ? (
+                              <Text
+                                variant="caption"
+                                color="muted"
+                                marginTop="xs"
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                              >
+                                {item.subLabel}
+                              </Text>
+                            ) : null}
+                          </Box>
                         </Box>
                       </Pressable>
                     ))}
@@ -628,16 +709,16 @@ function AppContent() {
           {zones.length === 0 ? (
             <Box flex={1} justifyContent="center" alignItems="center">
               <Text variant="heading2" color="textSecondary">
-                No zones yet
+                {t('empty.title')}
               </Text>
               <Box marginTop="xsPlus">
                 <Text variant="caption" color="muted">
-                  Add your first city to see time differences.
+                  {t('empty.subtitle')}
                 </Text>
               </Box>
               <Box marginTop="sPlus">
                 <Button
-                  label="Add a time zone"
+                  label={t('empty.cta')}
                   icon={<Plus size={18} color={theme.colors.textInverse} />}
                   onPress={openAddZone}
                 />
@@ -657,7 +738,7 @@ function AppContent() {
           {zones.length > 0 ? (
             <Button
               iconOnly
-              accessibilityLabel="Add time zone"
+              accessibilityLabel={t('accessibility.addTimeZone')}
               onPress={openAddZone}
               variant="primary"
               radius="xl"
@@ -704,7 +785,7 @@ function AppContent() {
                 }}
               >
                 <Text variant="caption" color="textSecondary">
-                  {"Press the 'Back' button to exit."}
+                  {t('exitPrompt')}
                 </Text>
               </Box>
             </Box>
@@ -762,18 +843,19 @@ function AppContent() {
                     }}
                   >
                     <Text variant="heading2" color="text">
-                      Delete zone?
+                      {t('delete.title')}
                     </Text>
                     <Box marginTop="xsPlus">
                       <Text variant="body" color="textSecondary" marginVertical="l">
-                        This will remove {zones[deleteIndex ?? -1]?.label ?? 'this zone'} from your
-                        list.
+                        {t('delete.body', {
+                          label: zones[deleteIndex ?? -1]?.label ?? t('delete.fallback'),
+                        })}
                       </Text>
                     </Box>
                     <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
                       <Box marginRight="m">
                         <Button
-                          label="Cancel"
+                          label={t('delete.cancel')}
                           variant="ghost"
                           size="sm"
                           onPress={() => setPendingDeleteIndex(null)}
@@ -781,7 +863,7 @@ function AppContent() {
                         />
                       </Box>
                       <Button
-                        label="Delete"
+                        label={t('delete.confirm')}
                         size="sm"
                         onPress={() => {
                           if (deleteIndex !== null) {
@@ -797,6 +879,100 @@ function AppContent() {
                   </Box>
                 </Pressable>
               </Animated.View>
+            </Pressable>
+          ) : null}
+          {showLanguageModal ? (
+            <Pressable
+              onPress={() => setShowLanguageModal(false)}
+              style={{
+                position: 'absolute',
+                top: -topInset,
+                left: 0,
+                right: 0,
+                bottom: -bottomInset,
+                zIndex: 4,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingTop: topInset,
+                paddingBottom: bottomInset,
+              }}
+            >
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: theme.colors.overlay,
+                  opacity: 1,
+                }}
+              />
+              <Pressable onPress={() => {}} style={{ minWidth: 250, alignSelf: 'center' }}>
+                <Box
+                  marginHorizontal="l"
+                  backgroundColor="card"
+                  borderRadius="l"
+                  borderWidth={1}
+                  borderColor="borderSubtle"
+                  padding="l"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOpacity: 0.2,
+                    shadowRadius: 10,
+                    shadowOffset: { width: 0, height: 6 },
+                    elevation: 10,
+                  }}
+                >
+                  <Text variant="heading2" color="text">
+                    {t('menu.language')}
+                  </Text>
+                  <Box marginTop="m">
+                    {languageOptions.map((option) => {
+                      const isSelected = option.value === selectedLanguage;
+                      return (
+                        <Pressable
+                          key={option.value}
+                          onPress={() => handleLanguageSelect(option.value)}
+                          style={({ pressed }) => ({
+                            opacity: pressed ? 0.85 : 1,
+                          })}
+                        >
+                          <Box
+                            flexDirection="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            paddingVertical="m"
+                            backgroundColor="card"
+                          >
+                            <Box flexDirection="row" alignItems="center">
+                              <Text variant="body" color="textSecondary" marginEnd="m">
+                                {option.flag}
+                              </Text>
+                              <Text variant="body" color="textSecondary" numberOfLines={1}>
+                                {option.label}
+                              </Text>
+                            </Box>
+                            {isSelected ? (
+                              <Box
+                                width={24}
+                                height={24}
+                                borderRadius="full"
+                                alignItems="center"
+                                justifyContent="center"
+                                backgroundColor="primary"
+                                marginStart="xl"
+                              >
+                                <Check size={14} color={theme.colors.textInverse} />
+                              </Box>
+                            ) : null}
+                          </Box>
+                        </Pressable>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Pressable>
             </Pressable>
           ) : null}
 

@@ -1,1 +1,34 @@
-{}
+{
+  "title": "Team Zones",
+  "menu": {
+    "addZone": "Dodaj nową strefę",
+    "lightTheme": "Jasny motyw",
+    "darkTheme": "Ciemny motyw",
+    "privacy": "Polityka prywatności",
+    "language": "Język"
+  },
+  "empty": {
+    "title": "Brak stref",
+    "subtitle": "Dodaj pierwsze miasto, aby zobaczyć różnice czasu.",
+    "cta": "Dodaj strefę czasową"
+  },
+  "exitPrompt": "Naciśnij „Wstecz”, aby wyjść.",
+  "delete": {
+    "title": "Usunąć strefę?",
+    "body": "To usunie {{label}} z Twojej listy.",
+    "fallback": "tę strefę",
+    "cancel": "Anuluj",
+    "confirm": "Usuń"
+  },
+  "actions": {
+    "edit": "Edytuj",
+    "delete": "Usuń"
+  },
+  "members": {
+    "empty": "Brak członków"
+  },
+  "accessibility": {
+    "menuToggle": "Otwórz menu",
+    "addTimeZone": "Dodaj strefę czasową"
+  }
+}

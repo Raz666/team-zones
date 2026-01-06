@@ -48,6 +48,11 @@ export const textVariants = {
     fontWeight: '600' as const,
     color: 'textSecondary' as const,
   },
+  menuItem: {
+    fontSize: 16,
+    fontWeight: '600' as const,
+    color: 'textSecondary' as const,
+  },
   body: {
     fontSize: 15,
     fontWeight: '500' as const,

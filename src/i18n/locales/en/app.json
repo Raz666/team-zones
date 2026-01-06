@@ -1,1 +1,34 @@
-{}
+{
+  "title": "Team Zones",
+  "menu": {
+    "addZone": "Add new zone",
+    "lightTheme": "Light theme",
+    "darkTheme": "Dark theme",
+    "privacy": "Privacy policy",
+    "language": "Language"
+  },
+  "empty": {
+    "title": "No zones yet",
+    "subtitle": "Add your first city to see time differences.",
+    "cta": "Add a time zone"
+  },
+  "exitPrompt": "Press the 'Back' button to exit.",
+  "delete": {
+    "title": "Delete zone?",
+    "body": "This will remove {{label}} from your list.",
+    "fallback": "this zone",
+    "cancel": "Cancel",
+    "confirm": "Delete"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "members": {
+    "empty": "No members listed"
+  },
+  "accessibility": {
+    "menuToggle": "Toggle menu",
+    "addTimeZone": "Add time zone"
+  }
+}

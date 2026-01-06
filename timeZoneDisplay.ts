@@ -1,6 +1,7 @@
 import type { TimeZoneAlias } from './timeZoneAliases';
 import { TIMEZONE_COUNTRIES } from './timeZoneCountries';
 import { normalizeTimeZoneId } from './timeZoneUtils';
+import { translateCountryName } from './src/i18n/geo';
 
 export type TimeZoneOption = {
   id: string;
@@ -8,6 +9,7 @@ export type TimeZoneOption = {
   city: string;
   district?: string;
   country?: string;
+  countryRaw?: string;
   region?: string;
   legacyCity?: string;
   label: string;
@@ -29,9 +31,13 @@ const REGION_LABELS: Record<string, string> = {
 
 const US_STATE_SEGMENTS = new Set(['Indiana', 'Kentucky', 'North_Dakota']);
 
-const timeZoneOptionCache = new Map<string, TimeZoneOption>();
+const timeZoneOptionCache = new Map<string, Map<string, TimeZoneOption>>();
 const timeFormatterCache = new Map<string, Intl.DateTimeFormat>();
 const offsetFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function getLangKey(lang: string): string {
+  return lang.toLowerCase();
+}
 
 const timeFormatterOptions: Intl.DateTimeFormatOptions = {
   hour: '2-digit',
@@ -210,15 +216,17 @@ function buildLocationParts(timeZone: string): {
   return { city, district, country, region: regionLabel };
 }
 
-export function getTimeZoneOption(timeZone: string): TimeZoneOption {
+export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOption {
   const zoneId = normalizeTimeZoneId(timeZone);
-  const cached = timeZoneOptionCache.get(zoneId);
+  const langKey = getLangKey(lang);
+  const cached = timeZoneOptionCache.get(zoneId)?.get(langKey);
   if (cached) return cached;
 
-  const { city, district, country, region } = buildLocationParts(zoneId);
+  const { city, district, country: countryRaw, region } = buildLocationParts(zoneId);
+  const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
   const label = buildOptionLabel(city, district, country, region);
   const regionTerm = region && region !== 'Americas' ? region : undefined;
-  const countryTerms = getCountrySearchTerms(country);
+  const countryTerms = getCountrySearchTerms(countryRaw);
   const searchText = buildSearchText(label, zoneId, [regionTerm, ...countryTerms]);
 
   const option = {
@@ -227,19 +235,24 @@ export function getTimeZoneOption(timeZone: string): TimeZoneOption {
     city,
     district,
     country,
+    countryRaw,
     region,
     label,
     searchText,
   };
-  timeZoneOptionCache.set(zoneId, option);
+  const langCache = timeZoneOptionCache.get(zoneId) ?? new Map<string, TimeZoneOption>();
+  langCache.set(langKey, option);
+  timeZoneOptionCache.set(zoneId, langCache);
   return option;
 }
 
 export function getTimeZoneOptions(
   timeZones: string[],
   aliases: TimeZoneAlias[],
+  lang: string,
 ): TimeZoneOption[] {
-  const baseOptions = timeZones.map((timeZone) => getTimeZoneOption(timeZone));
+  const langKey = getLangKey(lang);
+  const baseOptions = timeZones.map((timeZone) => getTimeZoneOption(timeZone, langKey));
   if (!aliases.length) return baseOptions;
 
   const baseByZone = new Map<string, TimeZoneOption>();
@@ -267,14 +280,15 @@ export function getTimeZoneOptions(
   ): TimeZoneOption => {
     const city = alias.city;
     const district = alias.district ?? baseOption.district;
-    const country = alias.country ?? baseOption.country;
+    const countryRaw = alias.country ?? baseOption.countryRaw ?? baseOption.country;
+    const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
     const region = baseOption.region;
     const legacyCity =
       useZoneIdAsId && baseOption.city.toLowerCase() !== city.toLowerCase()
         ? baseOption.city
         : undefined;
     const label = buildOptionLabel(city, district, country, region);
-    const countryTerms = getCountrySearchTerms(country);
+    const countryTerms = getCountrySearchTerms(countryRaw);
     const regionTerm = region && region !== 'Americas' ? region : undefined;
     const searchText = buildSearchText(label, zoneId, [
       regionTerm,
@@ -282,13 +296,14 @@ export function getTimeZoneOptions(
       ...countryTerms,
       legacyCity,
     ]);
-    const id = useZoneIdAsId ? zoneId : buildAliasId(zoneId, city, district, country);
+    const id = useZoneIdAsId ? zoneId : buildAliasId(zoneId, city, district, countryRaw);
     return {
       id,
       timeZoneId: zoneId,
       city,
       district,
       country,
+      countryRaw,
       region,
       legacyCity,
       label,

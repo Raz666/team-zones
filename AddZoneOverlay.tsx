@@ -77,7 +77,7 @@ export function AddZoneOverlay({
   onSubmitAtStart,
   onClose,
 }: AddZoneOverlayProps) {
-  const { t } = useTranslation('addZone');
+  const { t, i18n } = useTranslation('addZone');
   const theme = useTheme<AppTheme>();
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom;
@@ -115,8 +115,8 @@ export function AddZoneOverlay({
   }, []);
 
   const allTimeZoneOptions = useMemo(
-    () => getTimeZoneOptions(allTimeZones, TIMEZONE_ALIASES),
-    [allTimeZones],
+    () => getTimeZoneOptions(allTimeZones, TIMEZONE_ALIASES, i18n.language),
+    [allTimeZones, i18n.language],
   );
 
   const now = useMemo(() => new Date(), [isSearchFocused, search]);
@@ -209,7 +209,8 @@ export function AddZoneOverlay({
     if (initialValue) {
       const normalized = normalizeTimeZoneId(initialValue.timeZone);
       const option =
-        allTimeZoneOptions.find((item) => item.id === normalized) ?? getTimeZoneOption(normalized);
+        allTimeZoneOptions.find((item) => item.id === normalized) ??
+        getTimeZoneOption(normalized, i18n.language);
       setLabel(initialValue.label);
       setTimeZone(option.timeZoneId);
       setMembersInput(initialValue.members?.join(', ') ?? '');

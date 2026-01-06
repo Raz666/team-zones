@@ -12,20 +12,23 @@ import enAddZone from './locales/en/addZone.json';
 import enPrivacy from './locales/en/privacy.json';
 import enTimeBar from './locales/en/timeBar.json';
 import enAssets from './locales/en/assets.json';
+import enGeo from './locales/en/geo.json';
 
 import plApp from './locales/pl/app.json';
 import plAddZone from './locales/pl/addZone.json';
 import plPrivacy from './locales/pl/privacy.json';
 import plTimeBar from './locales/pl/timeBar.json';
 import plAssets from './locales/pl/assets.json';
+import plGeo from './locales/pl/geo.json';
 
 import jaApp from './locales/ja/app.json';
 import jaAddZone from './locales/ja/addZone.json';
 import jaPrivacy from './locales/ja/privacy.json';
 import jaTimeBar from './locales/ja/timeBar.json';
 import jaAssets from './locales/ja/assets.json';
+import jaGeo from './locales/ja/geo.json';
 
-const namespaces = ['app', 'addZone', 'privacy', 'timeBar', 'assets'] as const;
+const namespaces = ['app', 'addZone', 'privacy', 'timeBar', 'assets', 'geo'] as const;
 
 const resources = {
   en: {
@@ -34,6 +37,7 @@ const resources = {
     privacy: enPrivacy,
     timeBar: enTimeBar,
     assets: enAssets,
+    geo: enGeo,
   },
   pl: {
     app: plApp,
@@ -41,6 +45,7 @@ const resources = {
     privacy: plPrivacy,
     timeBar: plTimeBar,
     assets: plAssets,
+    geo: plGeo,
   },
   ja: {
     app: jaApp,
@@ -48,6 +53,7 @@ const resources = {
     privacy: jaPrivacy,
     timeBar: jaTimeBar,
     assets: jaAssets,
+    geo: jaGeo,
   },
 } as const;
 

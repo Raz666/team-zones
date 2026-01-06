@@ -98,7 +98,7 @@
         color: var(--muted);
       }
       .controls {
-        display: inline-flex;
+        display: flex;
         align-items: center;
         gap: 10px;
         flex-wrap: wrap;
@@ -108,8 +108,10 @@
         display: none;
         align-items: center;
         gap: 6px;
+        flex-wrap: wrap;
+        max-width: 100%;
         padding: 6px;
-        border-radius: 999px;
+        border-radius: 14px;
         border: 1px solid var(--card-border);
         background: var(--bg-alt);
       }
@@ -117,13 +119,14 @@
         display: inline-flex;
       }
       .lang-switcher a {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.2px;
         color: var(--text);
-        padding: 6px 10px;
+        padding: 6px 12px;
         border-radius: 999px;
         text-decoration: none;
+        white-space: nowrap;
         transition:
           background 120ms ease,
           color 120ms ease,
@@ -166,6 +169,23 @@
         transform: translateY(0);
         opacity: 0.92;
       }
+      @media (max-width: 640px) {
+        header {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .controls {
+          width: 100%;
+          justify-content: flex-start;
+        }
+        .lang-switcher {
+          width: 100%;
+        }
+        .toggle {
+          width: 100%;
+          justify-content: space-between;
+        }
+      }
       footer {
         margin-top: 26px;
         font-size: 13px;
@@ -190,7 +210,7 @@
       <main class="card">
         <header>
           <div>
-            <h1>Privacy Policy</h1>
+            <h1>Polityka prywatności</h1>
           </div>
           <div class="controls">
             <nav class="lang-switcher" aria-label="Language">
@@ -199,49 +219,55 @@
               <a href="privacy-policy.ja.html" data-lang="ja">日本語</a>
             </nav>
             <button class="toggle" type="button" id="theme-toggle" aria-label="Toggle theme">
-              <span id="theme-label">Light</span>
+              <span id="theme-label">Jasny</span>
             </button>
           </div>
         </header>
 
         <p class="meta">
-          <strong>Effective date:</strong>
-          <span>2025/12/29</span>
+          <strong>Data obowiązywania:</strong>
+          <span>2026/01/06</span>
         </p>
 
         <p>
-          Team Zones respects your privacy. The app does not collect, store, transmit, or share any
-          personal data.
+          Team Zones szanuje Twoją prywatność. Aplikacja nie zbiera, nie przechowuje, nie przesyła
+          ani nie udostępnia żadnych danych osobowych.
         </p>
 
-        <h2>What the app uses</h2>
-        <p>Team Zones only accesses:</p>
+        <h2>Co wykorzystuje aplikacja</h2>
+        <p>Team Zones ma dostęp wyłącznie do:</p>
         <ul>
-          <li>The current time of your device</li>
-          <li>The system light/dark appearance setting</li>
+          <li>aktualnego czasu na Twoim urządzeniu</li>
+          <li>systemowego ustawienia trybu jasnego / ciemnego</li>
+          <li>systemowego ustawienia języka urządzenia</li>
         </ul>
-        <p>This information is used solely to display time correctly and adjust the app's theme.</p>
-
-        <h2>What the app does not do</h2>
-        <ul>
-          <li>No account creation or login is required</li>
-          <li>No personal information is collected</li>
-          <li>No data is sent over the internet</li>
-          <li>No external APIs or services are called</li>
-          <li>No analytics, tracking, or ads are used</li>
-          <li>No data is shared with third parties</li>
-        </ul>
-
-        <h2>Data storage</h2>
         <p>
-          All app data (such as added time zones or names) is stored locally on your device only.
+          Informacje te są używane wyłącznie do poprawnego wyświetlania czasu, dostosowania motywu
+          aplikacji oraz wyświetlania interfejsu w odpowiednim języku.
         </p>
 
-        <h2>Contact</h2>
+        <h2>Czego aplikacja nie robi</h2>
+        <ul>
+          <li>nie wymaga tworzenia konta ani logowania</li>
+          <li>nie zbiera żadnych danych osobowych</li>
+          <li>nie wysyła danych przez internet</li>
+          <li>nie korzysta z zewnętrznych API ani usług</li>
+          <li>nie używa analityki, śledzenia ani reklam</li>
+          <li>nie udostępnia danych podmiotom trzecim</li>
+        </ul>
+
+        <h2>Przechowywanie danych</h2>
         <p>
-          If you have any questions about this privacy policy, you can contact the developer at:
+          Wszystkie dane aplikacji (takie jak dodane strefy czasowe lub nazwy) są przechowywane
+          wyłącznie lokalnie na Twoim urządzeniu.
+        </p>
+
+        <h2>Kontakt</h2>
+        <p>
+          Jeśli masz pytania dotyczące tej polityki prywatności, możesz skontaktować się z twórcą
+          aplikacji pod adresem:
           <br />
-          <strong><a id="contact-email" rel="nofollow noopener">Loading…</a></strong>
+          <strong><a id="contact-email" rel="nofollow noopener">Ładowanie…</a></strong>
         </p>
 
         <footer>&copy; Team Zones</footer>

@@ -56,12 +56,14 @@ function main() {
   const baseValue = loadJson(basePath);
   const baseCountry = getSection(baseValue, 'country');
   const baseRegion = getSection(baseValue, 'region');
-  if (!baseCountry || !baseRegion) {
-    console.error('[geo-i18n] Base geo.json must include "country" and "region" objects.');
+  const baseCity = getSection(baseValue, 'city');
+  if (!baseCountry || !baseRegion || !baseCity) {
+    console.error('[geo-i18n] Base geo.json must include "country", "region", and "city" objects.');
     process.exit(1);
   }
   const baseCountryKeys = new Set(Object.keys(baseCountry));
   const baseRegionKeys = new Set(Object.keys(baseRegion));
+  const baseCityKeys = new Set(Object.keys(baseCity));
 
   let hasErrors = false;
 
@@ -76,15 +78,17 @@ function main() {
     const localeValue = loadJson(localePath);
     const localeCountry = getSection(localeValue, 'country');
     const localeRegion = getSection(localeValue, 'region');
+    const localeCity = getSection(localeValue, 'city');
 
-    if (!localeCountry || !localeRegion) {
+    if (!localeCountry || !localeRegion || !localeCity) {
       hasErrors = true;
-      console.error(`[geo-i18n] Missing "country" or "region" section in ${localePath}`);
+      console.error(`[geo-i18n] Missing "country", "region", or "city" section in ${localePath}`);
       continue;
     }
 
     const localeCountryKeys = new Set(Object.keys(localeCountry));
     const localeRegionKeys = new Set(Object.keys(localeRegion));
+    const localeCityKeys = new Set(Object.keys(localeCity));
 
     const countryDiff = diffKeys(baseCountryKeys, localeCountryKeys);
     if (countryDiff.missing.length || countryDiff.extra.length) {
@@ -118,6 +122,22 @@ function main() {
       if (regionDiff.extra.length) {
         console.error(
           `Extra region keys (${regionDiff.extra.length}):\n${formatList(regionDiff.extra)}`,
+        );
+      }
+    }
+
+    const cityDiff = diffKeys(baseCityKeys, localeCityKeys);
+    if (cityDiff.missing.length || cityDiff.extra.length) {
+      hasErrors = true;
+      console.error(`\n[geo-i18n] City key mismatch in ${fileName} for ${locale}`);
+      if (cityDiff.missing.length) {
+        console.error(
+          `Missing city keys (${cityDiff.missing.length}):\n${formatList(cityDiff.missing)}`,
+        );
+      }
+      if (cityDiff.extra.length) {
+        console.error(
+          `Extra city keys (${cityDiff.extra.length}):\n${formatList(cityDiff.extra)}`,
         );
       }
     }

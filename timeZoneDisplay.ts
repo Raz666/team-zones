@@ -1,12 +1,21 @@
 import type { TimeZoneAlias } from './timeZoneAliases';
 import { TIMEZONE_COUNTRIES } from './timeZoneCountries';
 import { normalizeTimeZoneId } from './timeZoneUtils';
-import { regionKeyFromName, translateCountryName, translateRegionName } from './src/i18n/geo';
+import {
+  cityKeyFromName,
+  regionKeyFromName,
+  translateCityName,
+  translateCountryName,
+  translateRegionName,
+} from './src/i18n/geo';
 
 export type TimeZoneOption = {
   id: string;
   timeZoneId: string;
   city: string;
+  cityRaw?: string;
+  cityKey?: string;
+  cityLabel?: string;
   district?: string;
   country?: string;
   countryRaw?: string;
@@ -224,18 +233,29 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
   const cached = timeZoneOptionCache.get(zoneId)?.get(langKey);
   if (cached) return cached;
 
-  const { city, district, country: countryRaw, region } = buildLocationParts(zoneId);
+  const { city: cityRaw, district, country: countryRaw, region } = buildLocationParts(zoneId);
+  const cityKey = cityRaw ? cityKeyFromName(cityRaw) : '';
+  const cityLabel = cityRaw ? translateCityName(cityRaw, langKey) : undefined;
   const regionKey = region ? regionKeyFromName(region) : undefined;
   const regionLabel = region ? translateRegionName(region, langKey) : undefined;
   const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
-  const label = buildOptionLabel(city, district, country, regionLabel, regionKey);
+  const cityDisplay = cityLabel || cityRaw;
+  const label = buildOptionLabel(cityDisplay, district, country, regionLabel, regionKey);
   const countryTerms = getCountrySearchTerms(countryRaw);
-  const searchText = buildSearchText(label, zoneId, [regionLabel, ...countryTerms]);
+  const searchText = buildSearchText(label, zoneId, [
+    cityLabel,
+    cityRaw,
+    regionLabel,
+    ...countryTerms,
+  ]);
 
   const option = {
     id: zoneId,
     timeZoneId: zoneId,
-    city,
+    city: cityRaw,
+    cityRaw,
+    cityKey: cityKey || undefined,
+    cityLabel,
     district,
     country,
     countryRaw,
@@ -268,7 +288,8 @@ export function getTimeZoneOptions(
   for (const option of baseOptions) {
     const zoneId = option.timeZoneId;
     baseByZone.set(zoneId, option);
-    baseCityByZone.set(zoneId, option.city.toLowerCase());
+    const baseCity = option.cityRaw ?? option.city;
+    baseCityByZone.set(zoneId, baseCity.toLowerCase());
     const labels = labelByZone.get(zoneId) ?? new Set<string>();
     labels.add(option.label.toLowerCase());
     labelByZone.set(zoneId, labels);
@@ -283,30 +304,39 @@ export function getTimeZoneOptions(
     baseOption: TimeZoneOption,
     useZoneIdAsId: boolean,
   ): TimeZoneOption => {
-    const city = alias.city;
+    const cityRaw = alias.city;
+    const cityKey = cityRaw ? cityKeyFromName(cityRaw) : '';
+    const cityLabel = cityRaw ? translateCityName(cityRaw, langKey) : undefined;
     const district = alias.district ?? baseOption.district;
     const countryRaw = alias.country ?? baseOption.countryRaw ?? baseOption.country;
     const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
     const region = baseOption.region;
     const regionKey = baseOption.regionKey;
     const regionLabel = baseOption.regionLabel;
+    const baseCityRaw = baseOption.cityRaw ?? baseOption.city;
     const legacyCity =
-      useZoneIdAsId && baseOption.city.toLowerCase() !== city.toLowerCase()
-        ? baseOption.city
+      useZoneIdAsId && baseCityRaw.toLowerCase() !== cityRaw.toLowerCase()
+        ? baseCityRaw
         : undefined;
-    const label = buildOptionLabel(city, district, country, regionLabel, regionKey);
+    const cityDisplay = cityLabel || cityRaw;
+    const label = buildOptionLabel(cityDisplay, district, country, regionLabel, regionKey);
     const countryTerms = getCountrySearchTerms(countryRaw);
     const searchText = buildSearchText(label, zoneId, [
+      cityLabel,
+      cityRaw,
       regionLabel,
       ...(alias.searchTerms ?? []),
       ...countryTerms,
       legacyCity,
     ]);
-    const id = useZoneIdAsId ? zoneId : buildAliasId(zoneId, city, district, countryRaw);
+    const id = useZoneIdAsId ? zoneId : buildAliasId(zoneId, cityRaw, district, countryRaw);
     return {
       id,
       timeZoneId: zoneId,
-      city,
+      city: cityRaw,
+      cityRaw,
+      cityKey: cityKey || undefined,
+      cityLabel,
       district,
       country,
       countryRaw,

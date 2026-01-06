@@ -9,4 +9,4 @@ To add a new language:
 Validation:
 
 - Run `npx tsx scripts/validate-i18n.ts` to verify all `pl/` and `ja/` keys match `en/`.
-- Run `npx tsx scripts/validate-geo-i18n.ts` to verify `geo.json` keys match `en/`.
+- Run `npx tsx scripts/validate-geo-i18n.ts` to verify `geo.json` country/region/city keys match `en/`.

@@ -39,14 +39,19 @@ const normalizeLabelValue = (value: string) => value.trim().toLowerCase();
 
 const getOptionLabelKeys = (option: TimeZoneOption) => {
   const keys = new Set<string>();
-  const cityKey = normalizeLabelValue(option.city);
-  if (cityKey) keys.add(cityKey);
+  const addKey = (value?: string) => {
+    if (!value) return;
+    const key = normalizeLabelValue(value);
+    if (key) keys.add(key);
+  };
+  addKey(option.city);
+  addKey(option.cityRaw);
+  addKey(option.cityLabel);
   if (option.legacyCity) {
     const legacyKey = normalizeLabelValue(option.legacyCity);
     if (legacyKey) keys.add(legacyKey);
   }
-  const labelKey = normalizeLabelValue(option.label);
-  if (labelKey) keys.add(labelKey);
+  addKey(option.label);
   return keys;
 };
 
@@ -177,6 +182,9 @@ export function AddZoneOverlay({
     }
     return false;
   };
+
+  const getCityLabel = (option: TimeZoneOption) =>
+    option.cityLabel ?? option.cityRaw ?? option.city;
 
   const getLocationLine = (option: TimeZoneOption) => {
     const region =
@@ -338,7 +346,7 @@ export function AddZoneOverlay({
       skipResetOnClearRef.current = true;
       onReturnToAdd?.();
       setTimeZone(option.timeZoneId);
-      setLabel(option.city);
+      setLabel(getCityLabel(option));
       setSearch(option.label);
       setError('');
       setIsSearchFocused(false);
@@ -358,7 +366,7 @@ export function AddZoneOverlay({
     }
 
     setTimeZone(option.timeZoneId);
-    setLabel(option.city);
+    setLabel(getCityLabel(option));
     setSearch(option.label);
     setError('');
     setIsSearchFocused(false);
@@ -703,6 +711,7 @@ export function AddZoneOverlay({
             nestedScrollEnabled
             renderItem={({ item }) => {
               const isUsed = isOptionUsed(item);
+              const cityLabel = getCityLabel(item);
               const locationLine = getLocationLine(item);
               const timeLabel = formatTimeInZone(item.timeZoneId, now);
               const offsetLabel = formatUtcOffsetLabel(item.timeZoneId, now);
@@ -713,7 +722,7 @@ export function AddZoneOverlay({
                       <Box flexDirection="row" alignItems="center" flex={1} marginRight="s">
                         <Box flex={1}>
                           <Text variant="body" color="textSecondary">
-                            {item.city}
+                            {cityLabel}
                           </Text>
                           {locationLine ? (
                             <Text variant="caption" color="muted">

@@ -5,7 +5,7 @@ import { initReactI18next } from 'react-i18next';
 import * as Localization from 'expo-localization';
 
 import { detectLanguage, getDeviceLanguage, getStoredLanguageOverride } from './detectLanguage';
-import { defaultLanguage, supportedLanguages } from './supportedLanguages';
+import { supportedLanguages } from './supportedLanguages';
 
 import enApp from './locales/en/app.json';
 import enAddZone from './locales/en/addZone.json';
@@ -97,20 +97,30 @@ export function initI18n(): Promise<void> {
 
   initPromise = (async () => {
     const language = await detectLanguage();
-    await i18n.use(initReactI18next).init({
+    const isDev = __DEV__;
+    const initOptions = {
       resources,
       lng: language,
-      fallbackLng: defaultLanguage,
+      fallbackLng: 'en',
       supportedLngs: [...supportedLanguages],
       ns: [...namespaces],
       defaultNS: 'app',
+      returnNull: false,
+      returnEmptyString: false,
       interpolation: {
         escapeValue: false,
       },
       react: {
         useSuspense: false,
       },
-    });
+      saveMissing: isDev,
+      missingKeyHandler: isDev
+        ? (_lngs: readonly string[], namespace: string, key: string) => {
+            console.warn(`[i18n] missing key ${namespace}:${key}`);
+          }
+        : undefined,
+    };
+    await i18n.use(initReactI18next).init(initOptions);
     attachLocaleListener();
   })();
 

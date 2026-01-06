@@ -240,5 +240,18 @@
     "westernSahara": "Sahara Zachodnia",
     "zambia": "Zambia",
     "zimbabwe": "Zimbabwe"
+  },
+  "region": {
+    "africa": "Afryka",
+    "americas": "Ameryki",
+    "antarctica": "Antarktyda",
+    "arctic": "Arktyka",
+    "asia": "Azja",
+    "atlantic": "Atlantyk",
+    "australia": "Australia",
+    "europe": "Europa",
+    "indianOcean": "Ocean Indyjski",
+    "pacific": "Pacyfik",
+    "utc": "UTC"
   }
 }

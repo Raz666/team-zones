@@ -179,7 +179,8 @@ export function AddZoneOverlay({
   };
 
   const getLocationLine = (option: TimeZoneOption) => {
-    const region = option.region && option.region !== 'Americas' ? option.region : undefined;
+    const region =
+      option.regionKey && option.regionKey !== 'americas' ? option.regionLabel : undefined;
     const parts = option.district ? [option.district, option.country] : [option.country, region];
     const cleaned = parts.filter(Boolean) as string[];
     const deduped = cleaned.filter((piece, index) => {

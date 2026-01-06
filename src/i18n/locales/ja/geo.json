@@ -240,5 +240,18 @@
     "westernSahara": "西サハラ",
     "zambia": "ザンビア",
     "zimbabwe": "ジンバブエ"
+  },
+  "region": {
+    "africa": "アフリカ",
+    "americas": "アメリカ大陸",
+    "antarctica": "南極",
+    "arctic": "北極",
+    "asia": "アジア",
+    "atlantic": "大西洋",
+    "australia": "オーストラリア",
+    "europe": "ヨーロッパ",
+    "indianOcean": "インド洋",
+    "pacific": "太平洋",
+    "utc": "UTC"
   }
 }

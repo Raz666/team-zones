@@ -1,7 +1,7 @@
 import type { TimeZoneAlias } from './timeZoneAliases';
 import { TIMEZONE_COUNTRIES } from './timeZoneCountries';
 import { normalizeTimeZoneId } from './timeZoneUtils';
-import { translateCountryName } from './src/i18n/geo';
+import { regionKeyFromName, translateCountryName, translateRegionName } from './src/i18n/geo';
 
 export type TimeZoneOption = {
   id: string;
@@ -11,6 +11,8 @@ export type TimeZoneOption = {
   country?: string;
   countryRaw?: string;
   region?: string;
+  regionKey?: string;
+  regionLabel?: string;
   legacyCity?: string;
   label: string;
   searchText: string;
@@ -59,10 +61,9 @@ function prettifySegment(segment: string): string {
   return segment.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
-function shouldIncludeRegionInLabel(region?: string, country?: string, district?: string): boolean {
-  if (!region) return false;
-  if (region === 'Americas') return false;
-  if (region === 'UTC') return true;
+function shouldIncludeRegionInLabel(regionKey?: string): boolean {
+  if (!regionKey) return false;
+  if (regionKey === 'americas') return false;
   return true;
 }
 
@@ -70,11 +71,12 @@ function buildOptionLabel(
   city: string,
   district?: string,
   country?: string,
-  region?: string,
+  regionLabel?: string,
+  regionKey?: string,
 ): string {
   const pieces = [city, district, country].filter(Boolean) as string[];
-  if (shouldIncludeRegionInLabel(region, country, district)) {
-    pieces.push(region as string);
+  if (shouldIncludeRegionInLabel(regionKey) && regionLabel) {
+    pieces.push(regionLabel);
   }
   const deduped = pieces.filter((piece, index) => {
     if (index === 0) return true;
@@ -223,11 +225,12 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
   if (cached) return cached;
 
   const { city, district, country: countryRaw, region } = buildLocationParts(zoneId);
+  const regionKey = region ? regionKeyFromName(region) : undefined;
+  const regionLabel = region ? translateRegionName(region, langKey) : undefined;
   const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
-  const label = buildOptionLabel(city, district, country, region);
-  const regionTerm = region && region !== 'Americas' ? region : undefined;
+  const label = buildOptionLabel(city, district, country, regionLabel, regionKey);
   const countryTerms = getCountrySearchTerms(countryRaw);
-  const searchText = buildSearchText(label, zoneId, [regionTerm, ...countryTerms]);
+  const searchText = buildSearchText(label, zoneId, [regionLabel, ...countryTerms]);
 
   const option = {
     id: zoneId,
@@ -237,6 +240,8 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
     country,
     countryRaw,
     region,
+    regionKey,
+    regionLabel,
     label,
     searchText,
   };
@@ -283,15 +288,16 @@ export function getTimeZoneOptions(
     const countryRaw = alias.country ?? baseOption.countryRaw ?? baseOption.country;
     const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
     const region = baseOption.region;
+    const regionKey = baseOption.regionKey;
+    const regionLabel = baseOption.regionLabel;
     const legacyCity =
       useZoneIdAsId && baseOption.city.toLowerCase() !== city.toLowerCase()
         ? baseOption.city
         : undefined;
-    const label = buildOptionLabel(city, district, country, region);
+    const label = buildOptionLabel(city, district, country, regionLabel, regionKey);
     const countryTerms = getCountrySearchTerms(countryRaw);
-    const regionTerm = region && region !== 'Americas' ? region : undefined;
     const searchText = buildSearchText(label, zoneId, [
-      regionTerm,
+      regionLabel,
       ...(alias.searchTerms ?? []),
       ...countryTerms,
       legacyCity,
@@ -305,6 +311,8 @@ export function getTimeZoneOptions(
       country,
       countryRaw,
       region,
+      regionKey,
+      regionLabel,
       legacyCity,
       label,
       searchText,

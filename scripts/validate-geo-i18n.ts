@@ -13,24 +13,6 @@ function isPlainObject(value: JsonValue): value is JsonObject {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function collectKeys(value: JsonValue, prefix: string, out: Set<string>): void {
-  if (isPlainObject(value)) {
-    const entries = Object.entries(value);
-    if (entries.length === 0 && prefix) {
-      out.add(prefix);
-    }
-    for (const [key, child] of entries) {
-      const next = prefix ? `${prefix}.${key}` : key;
-      collectKeys(child, next, out);
-    }
-    return;
-  }
-
-  if (prefix) {
-    out.add(prefix);
-  }
-}
-
 function loadJson(filePath: string): JsonValue {
   const raw = fs.readFileSync(filePath, 'utf-8');
   return JSON.parse(raw) as JsonValue;
@@ -58,6 +40,12 @@ function formatList(items: string[]): string {
   return items.length ? items.map((item) => `  - ${item}`).join('\n') : '  (none)';
 }
 
+function getSection(value: JsonValue, section: string): JsonObject | null {
+  if (!isPlainObject(value)) return null;
+  const candidate = value[section];
+  return isPlainObject(candidate) ? candidate : null;
+}
+
 function main() {
   const basePath = path.join(localesRoot, baseLocale, fileName);
   if (!fs.existsSync(basePath)) {
@@ -66,8 +54,14 @@ function main() {
   }
 
   const baseValue = loadJson(basePath);
-  const baseKeys = new Set<string>();
-  collectKeys(baseValue, '', baseKeys);
+  const baseCountry = getSection(baseValue, 'country');
+  const baseRegion = getSection(baseValue, 'region');
+  if (!baseCountry || !baseRegion) {
+    console.error('[geo-i18n] Base geo.json must include "country" and "region" objects.');
+    process.exit(1);
+  }
+  const baseCountryKeys = new Set(Object.keys(baseCountry));
+  const baseRegionKeys = new Set(Object.keys(baseRegion));
 
   let hasErrors = false;
 
@@ -80,19 +74,51 @@ function main() {
     }
 
     const localeValue = loadJson(localePath);
-    const localeKeys = new Set<string>();
-    collectKeys(localeValue, '', localeKeys);
+    const localeCountry = getSection(localeValue, 'country');
+    const localeRegion = getSection(localeValue, 'region');
 
-    const { missing, extra } = diffKeys(baseKeys, localeKeys);
-
-    if (missing.length || extra.length) {
+    if (!localeCountry || !localeRegion) {
       hasErrors = true;
-      console.error(`\n[geo-i18n] Key mismatch in ${fileName} for ${locale}`);
-      if (missing.length) {
-        console.error(`Missing keys (${missing.length}):\n${formatList(missing)}`);
+      console.error(`[geo-i18n] Missing "country" or "region" section in ${localePath}`);
+      continue;
+    }
+
+    const localeCountryKeys = new Set(Object.keys(localeCountry));
+    const localeRegionKeys = new Set(Object.keys(localeRegion));
+
+    const countryDiff = diffKeys(baseCountryKeys, localeCountryKeys);
+    if (countryDiff.missing.length || countryDiff.extra.length) {
+      hasErrors = true;
+      console.error(`\n[geo-i18n] Country key mismatch in ${fileName} for ${locale}`);
+      if (countryDiff.missing.length) {
+        console.error(
+          `Missing country keys (${countryDiff.missing.length}):\n${formatList(
+            countryDiff.missing,
+          )}`,
+        );
       }
-      if (extra.length) {
-        console.error(`Extra keys (${extra.length}):\n${formatList(extra)}`);
+      if (countryDiff.extra.length) {
+        console.error(
+          `Extra country keys (${countryDiff.extra.length}):\n${formatList(countryDiff.extra)}`,
+        );
+      }
+    }
+
+    const regionDiff = diffKeys(baseRegionKeys, localeRegionKeys);
+    if (regionDiff.missing.length || regionDiff.extra.length) {
+      hasErrors = true;
+      console.error(`\n[geo-i18n] Region key mismatch in ${fileName} for ${locale}`);
+      if (regionDiff.missing.length) {
+        console.error(
+          `Missing region keys (${regionDiff.missing.length}):\n${formatList(
+            regionDiff.missing,
+          )}`,
+        );
+      }
+      if (regionDiff.extra.length) {
+        console.error(
+          `Extra region keys (${regionDiff.extra.length}):\n${formatList(regionDiff.extra)}`,
+        );
       }
     }
   }

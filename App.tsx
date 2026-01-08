@@ -1,6 +1,6 @@
 import './src/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Dimensions, Easing, Pressable } from 'react-native';
+import { Animated, BackHandler, Dimensions, Easing, Image, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -40,6 +40,8 @@ type ZoneGroup = {
 type DayBadgeTag = 'yday' | 'today' | 'tomo';
 
 const AnimatedBox = Animated.createAnimatedComponent(Box);
+const SPLASH_BACKGROUND = '#0B132B';
+const splashImage = require('./assets/splash-icon.png');
 
 const timeFormatter = (locale: string, tz: string) =>
   new Intl.DateTimeFormat(locale, {
@@ -114,6 +116,7 @@ function AppContent() {
   const rawLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0].toLowerCase();
   const selectedLanguage = isSupportedLanguage(rawLanguage) ? rawLanguage : 'en';
   const intlLocale = getIntlLocale(selectedLanguage);
+  const appIsReady = hydrated && themeHydrated;
 
   useEffect(() => {
     if (paused) return;
@@ -598,15 +601,24 @@ function AppContent() {
 
   return (
     <ThemeProvider theme={theme}>
-      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={theme.colors.background} />
-      <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <Box
-          flex={1}
-          backgroundColor="background"
-          paddingHorizontal="l"
-          paddingTop="l"
-          paddingBottom="8xl"
-        >
+      <StatusBar
+        style={isDark ? 'light' : 'dark'}
+        backgroundColor={appIsReady ? theme.colors.background : SPLASH_BACKGROUND}
+      />
+      <SafeAreaView
+        style={{
+          flex: 1,
+          backgroundColor: appIsReady ? theme.colors.background : SPLASH_BACKGROUND,
+        }}
+      >
+        {appIsReady ? (
+          <Box
+            flex={1}
+            backgroundColor="background"
+            paddingHorizontal="l"
+            paddingTop="l"
+            paddingBottom="8xl"
+          >
           {showMenu ? (
             <Pressable
               onPress={() => setShowMenu(false)}
@@ -1022,6 +1034,15 @@ function AppContent() {
             />
           ) : null}
         </Box>
+        ) : (
+          <Box flex={1} alignItems="center" justifyContent="center">
+            <Image
+              source={splashImage}
+              resizeMode="contain"
+              style={{ width: 220, height: 220 }}
+            />
+          </Box>
+        )}
       </SafeAreaView>
     </ThemeProvider>
   );

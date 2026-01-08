@@ -43,3 +43,4 @@ yarn-error.*
 # other
 /aabs
 /store_assets
+/raw_assets

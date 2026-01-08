@@ -40,7 +40,7 @@ type ZoneGroup = {
 type DayBadgeTag = 'yday' | 'today' | 'tomo';
 
 const AnimatedBox = Animated.createAnimatedComponent(Box);
-const SPLASH_BACKGROUND = '#0B132B';
+const SPLASH_BACKGROUND = '#080D1D';
 const splashImage = require('./assets/splash-icon.png');
 
 const timeFormatter = (locale: string, tz: string) =>
@@ -412,7 +412,6 @@ function AppContent() {
     index,
   }: DragListRenderItemInfo<ZoneGroup>) {
     const info = formatZone(currentTime, item, deviceTimeZone, intlLocale);
-    const isHover = hoverIndex === index && activeIndex !== null && activeIndex !== index;
     const showActions = actionIndex === index && !isActive;
     const actionAnimation =
       actionAnimRefs.current[index] || (actionAnimRefs.current[index] = new Animated.Value(0));
@@ -470,17 +469,6 @@ function AppContent() {
             shadowRadius: 10,
             shadowOffset: { width: 0, height: 6 },
             elevation: 8,
-          }
-        : null,
-      !isActive && activeIndex === index
-        ? {
-            borderColor: theme.colors.cardBorderArmed,
-          }
-        : null,
-      isHover
-        ? {
-            borderColor: theme.colors.cardBorderHover,
-            backgroundColor: theme.colors.cardHover,
           }
         : null,
     ];
@@ -619,226 +607,308 @@ function AppContent() {
             paddingTop="l"
             paddingBottom="8xl"
           >
-          {showMenu ? (
-            <Pressable
-              onPress={() => setShowMenu(false)}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                zIndex: 1,
-              }}
-            />
-          ) : null}
-          <Box
-            flexDirection="row"
-            justifyContent="space-between"
-            alignItems="center"
-            marginBottom="l"
-            style={{ zIndex: 2, position: 'relative' }}
-          >
-            <Text variant="heading2">{t('title')}</Text>
-            <Box flexDirection="row" alignItems="center">
-              <Box style={{ position: 'relative' }}>
-                <Button
-                  iconOnly
-                  accessibilityLabel={t('accessibility.menuToggle')}
-                  onPress={() => setShowMenu((prev) => !prev)}
-                  variant="primary"
-                  size="sm"
-                  radius="m"
-                  borderWidth={1}
-                  borderColor="primary"
-                  icon={<Menu color={theme.colors.textInverse} size={18} />}
-                />
-                {showMenu ? (
-                  <Box
-                    backgroundColor="card"
-                    borderRadius="l"
-                    borderWidth={1}
-                    borderColor="borderSubtle"
-                    paddingVertical="xs"
-                    style={{
-                      position: 'absolute',
-                      top: '100%',
-                      right: 0,
-                      marginTop: theme.spacing.s,
-                      minWidth: 200,
-                      zIndex: 3,
-                      shadowColor: '#000',
-                      shadowOpacity: 0.2,
-                      shadowRadius: 10,
-                      shadowOffset: { width: 0, height: 6 },
-                      elevation: 10,
-                    }}
-                  >
-                    {menuItems.map((item, index) => (
-                      <Pressable
-                        key={item.label}
-                        onPress={item.onPress}
-                        style={({ pressed }) => ({
-                          opacity: pressed ? 0.85 : 1,
-                        })}
-                      >
-                        <Box
-                          flexDirection="row"
-                          alignItems="center"
-                          paddingHorizontal="mPlus"
-                          paddingVertical="lPlus"
-                          borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
-                          borderBottomColor="borderSubtle"
-                          style={{ minWidth: 0 }}
-                        >
-                          {item.icon}
-                          <Box width={theme.spacing.sPlus} />
-                          <Box style={{ minWidth: 0, flexShrink: 1 }}>
-                            <Text variant="menuItem" style={{ flexShrink: 1 }}>
-                              {item.label}
-                            </Text>
-                            {item.subLabel ? (
-                              <Text
-                                variant="caption"
-                                color="muted"
-                                marginTop="xs"
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                              >
-                                {item.subLabel}
-                              </Text>
-                            ) : null}
-                          </Box>
-                        </Box>
-                      </Pressable>
-                    ))}
-                  </Box>
-                ) : null}
-              </Box>
-            </Box>
-          </Box>
-
-          {zones.length === 0 ? (
-            <Box flex={1} justifyContent="center" alignItems="center">
-              <Text variant="heading2" color="textSecondary">
-                {t('empty.title')}
-              </Text>
-              <Box marginTop="xsPlus">
-                <Text variant="caption" color="muted">
-                  {t('empty.subtitle')}
-                </Text>
-              </Box>
-              <Box marginTop="sPlus">
-                <Button
-                  label={t('empty.cta')}
-                  icon={<Plus size={18} color={theme.colors.textInverse} />}
-                  onPress={openAddZone}
-                />
-              </Box>
-            </Box>
-          ) : (
-            <DragList
-              contentContainerStyle={{ paddingBottom: theme.spacing['5xl'] }}
-              data={zones}
-              keyExtractor={(item) => `${item.label}-${item.timeZone}`}
-              renderItem={renderItem}
-              onReordered={onReordered}
-              onHoverChanged={(index) => setHoverIndex(index)}
-            />
-          )}
-
-          {zones.length > 0 ? (
-            <Button
-              iconOnly
-              accessibilityLabel={t('accessibility.addTimeZone')}
-              onPress={openAddZone}
-              variant="primary"
-              radius="xl"
-              iconOnlySize={52}
-              icon={<Plus size={22} color={theme.colors.textInverse} />}
-              containerStyle={{
-                position: 'absolute',
-                right: theme.spacing.l,
-                bottom: theme.spacing['7xl'],
-                zIndex: 3,
-              }}
-              contentStyle={{
-                shadowColor: '#000',
-                shadowOpacity: 0.25,
-                shadowRadius: 10,
-                shadowOffset: { width: 0, height: 6 },
-                elevation: 12,
-              }}
-            />
-          ) : null}
-          {exitArmed ? (
-            <Box
-              position="absolute"
-              left={theme.spacing.l}
-              right={theme.spacing.l}
-              bottom={theme.spacing['6xl']}
-              zIndex={2}
-              pointerEvents="none"
-              alignItems="center"
-            >
-              <Box
-                paddingHorizontal="m"
-                paddingVertical="sPlus"
-                borderRadius="l"
-                backgroundColor="card"
-                borderWidth={1}
-                borderColor="borderSubtle"
-                style={{
-                  shadowColor: '#000',
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  shadowOffset: { width: 0, height: 4 },
-                  elevation: 6,
-                }}
-              >
-                <Text variant="caption" color="textSecondary">
-                  {t('exitPrompt')}
-                </Text>
-              </Box>
-            </Box>
-          ) : null}
-          {deleteModalRendered ? (
-            <Pressable
-              onPress={() => setPendingDeleteIndex(null)}
-              style={{
-                position: 'absolute',
-                top: -topInset,
-                left: 0,
-                right: 0,
-                bottom: -bottomInset,
-                zIndex: 4,
-                justifyContent: 'center',
-                alignItems: 'center',
-                paddingTop: topInset,
-                paddingBottom: bottomInset,
-              }}
-            >
-              <Animated.View
+            {showMenu ? (
+              <Pressable
+                onPress={() => setShowMenu(false)}
                 style={{
                   position: 'absolute',
                   top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  backgroundColor: theme.colors.overlay,
-                  opacity: deleteBackdropOpacity,
+                  zIndex: 1,
                 }}
               />
-              <Animated.View
+            ) : null}
+            <Box
+              flexDirection="row"
+              justifyContent="space-between"
+              alignItems="center"
+              marginBottom="l"
+              style={{ zIndex: 2, position: 'relative' }}
+            >
+              <Text variant="heading2">{t('title')}</Text>
+              <Box flexDirection="row" alignItems="center">
+                <Box style={{ position: 'relative' }}>
+                  <Button
+                    iconOnly
+                    accessibilityLabel={t('accessibility.menuToggle')}
+                    onPress={() => setShowMenu((prev) => !prev)}
+                    variant="primary"
+                    size="sm"
+                    radius="m"
+                    borderWidth={1}
+                    borderColor="primary"
+                    icon={<Menu color={theme.colors.textInverse} size={18} />}
+                  />
+                  {showMenu ? (
+                    <Box
+                      backgroundColor="card"
+                      borderRadius="l"
+                      borderWidth={1}
+                      borderColor="borderSubtle"
+                      paddingVertical="xs"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        right: 0,
+                        marginTop: theme.spacing.s,
+                        minWidth: 200,
+                        zIndex: 3,
+                        shadowColor: '#000',
+                        shadowOpacity: 0.2,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 6 },
+                        elevation: 10,
+                      }}
+                    >
+                      {menuItems.map((item, index) => (
+                        <Pressable
+                          key={item.label}
+                          onPress={item.onPress}
+                          style={({ pressed }) => ({
+                            opacity: pressed ? 0.85 : 1,
+                          })}
+                        >
+                          <Box
+                            flexDirection="row"
+                            alignItems="center"
+                            paddingHorizontal="mPlus"
+                            paddingVertical="lPlus"
+                            borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
+                            borderBottomColor="borderSubtle"
+                            style={{ minWidth: 0 }}
+                          >
+                            {item.icon}
+                            <Box width={theme.spacing.sPlus} />
+                            <Box style={{ minWidth: 0, flexShrink: 1 }}>
+                              <Text variant="menuItem" style={{ flexShrink: 1 }}>
+                                {item.label}
+                              </Text>
+                              {item.subLabel ? (
+                                <Text
+                                  variant="caption"
+                                  color="muted"
+                                  marginTop="xs"
+                                  numberOfLines={1}
+                                  ellipsizeMode="tail"
+                                >
+                                  {item.subLabel}
+                                </Text>
+                              ) : null}
+                            </Box>
+                          </Box>
+                        </Pressable>
+                      ))}
+                    </Box>
+                  ) : null}
+                </Box>
+              </Box>
+            </Box>
+
+            {zones.length === 0 ? (
+              <Box flex={1} justifyContent="center" alignItems="center">
+                <Text variant="heading2" color="textSecondary">
+                  {t('empty.title')}
+                </Text>
+                <Box marginTop="xsPlus">
+                  <Text variant="caption" color="muted">
+                    {t('empty.subtitle')}
+                  </Text>
+                </Box>
+                <Box marginTop="sPlus">
+                  <Button
+                    label={t('empty.cta')}
+                    icon={<Plus size={18} color={theme.colors.textInverse} />}
+                    onPress={openAddZone}
+                  />
+                </Box>
+              </Box>
+            ) : (
+              <DragList
+                contentContainerStyle={{ paddingBottom: theme.spacing['5xl'] }}
+                data={zones}
+                keyExtractor={(item) => `${item.label}-${item.timeZone}`}
+                renderItem={renderItem}
+                onReordered={onReordered}
+                onHoverChanged={(index) => setHoverIndex(index)}
+              />
+            )}
+
+            {zones.length > 0 ? (
+              <Button
+                iconOnly
+                accessibilityLabel={t('accessibility.addTimeZone')}
+                onPress={openAddZone}
+                variant="primary"
+                radius="xl"
+                iconOnlySize={52}
+                icon={<Plus size={22} color={theme.colors.textInverse} />}
+                containerStyle={{
+                  position: 'absolute',
+                  right: theme.spacing.l,
+                  bottom: theme.spacing['7xl'],
+                  zIndex: 3,
+                }}
+                contentStyle={{
+                  shadowColor: '#000',
+                  shadowOpacity: 0.25,
+                  shadowRadius: 10,
+                  shadowOffset: { width: 0, height: 6 },
+                  elevation: 12,
+                }}
+              />
+            ) : null}
+            {exitArmed ? (
+              <Box
+                position="absolute"
+                left={theme.spacing.l}
+                right={theme.spacing.l}
+                bottom={theme.spacing['6xl']}
+                zIndex={2}
+                pointerEvents="none"
+                alignItems="center"
+              >
+                <Box
+                  paddingHorizontal="m"
+                  paddingVertical="sPlus"
+                  borderRadius="l"
+                  backgroundColor="card"
+                  borderWidth={1}
+                  borderColor="borderSubtle"
+                  style={{
+                    shadowColor: '#000',
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                    shadowOffset: { width: 0, height: 4 },
+                    elevation: 6,
+                  }}
+                >
+                  <Text variant="caption" color="textSecondary">
+                    {t('exitPrompt')}
+                  </Text>
+                </Box>
+              </Box>
+            ) : null}
+            {deleteModalRendered ? (
+              <Pressable
+                onPress={() => setPendingDeleteIndex(null)}
                 style={{
-                  width: '100%',
-                  transform: [{ translateY: deleteModalTranslateY }],
+                  position: 'absolute',
+                  top: -topInset,
+                  left: 0,
+                  right: 0,
+                  bottom: -bottomInset,
+                  zIndex: 4,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingTop: topInset,
+                  paddingBottom: bottomInset,
                 }}
               >
-                <Pressable
-                  onPress={() => {}}
-                  style={({ pressed }) => ({ opacity: pressed ? 0.98 : 1, width: '100%' })}
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: theme.colors.overlay,
+                    opacity: deleteBackdropOpacity,
+                  }}
+                />
+                <Animated.View
+                  style={{
+                    width: '100%',
+                    transform: [{ translateY: deleteModalTranslateY }],
+                  }}
                 >
+                  <Pressable
+                    onPress={() => {}}
+                    style={({ pressed }) => ({ opacity: pressed ? 0.98 : 1, width: '100%' })}
+                  >
+                    <Box
+                      marginHorizontal="l"
+                      backgroundColor="card"
+                      borderRadius="l"
+                      borderWidth={1}
+                      borderColor="borderSubtle"
+                      padding="l"
+                      style={{
+                        shadowColor: '#000',
+                        shadowOpacity: 0.2,
+                        shadowRadius: 10,
+                        shadowOffset: { width: 0, height: 6 },
+                        elevation: 10,
+                      }}
+                    >
+                      <Text variant="heading2" color="text">
+                        {t('delete.title')}
+                      </Text>
+                      <Box marginTop="xsPlus">
+                        <Text variant="body" color="textSecondary" marginVertical="l">
+                          {t('delete.body', {
+                            label: zones[deleteIndex ?? -1]?.label ?? t('delete.fallback'),
+                          })}
+                        </Text>
+                      </Box>
+                      <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
+                        <Box marginRight="m">
+                          <Button
+                            label={t('delete.cancel')}
+                            variant="ghost"
+                            size="sm"
+                            onPress={() => setPendingDeleteIndex(null)}
+                            icon={<X size={14} color={theme.colors.text} />}
+                          />
+                        </Box>
+                        <Button
+                          label={t('delete.confirm')}
+                          size="sm"
+                          onPress={() => {
+                            if (deleteIndex !== null) {
+                              deleteZone(deleteIndex);
+                              setPendingDeleteIndex(null);
+                            }
+                          }}
+                          backgroundColor="danger"
+                          borderColor="danger"
+                          icon={<Trash2 size={14} color={theme.colors.textInverse} />}
+                        />
+                      </Box>
+                    </Box>
+                  </Pressable>
+                </Animated.View>
+              </Pressable>
+            ) : null}
+            {showLanguageModal ? (
+              <Pressable
+                onPress={() => setShowLanguageModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: -topInset,
+                  left: 0,
+                  right: 0,
+                  bottom: -bottomInset,
+                  zIndex: 4,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  paddingTop: topInset,
+                  paddingBottom: bottomInset,
+                }}
+              >
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: theme.colors.overlay,
+                    opacity: 1,
+                  }}
+                />
+                <Pressable onPress={() => {}} style={{ minWidth: 250, alignSelf: 'center' }}>
                   <Box
                     marginHorizontal="l"
                     backgroundColor="card"
@@ -855,192 +925,106 @@ function AppContent() {
                     }}
                   >
                     <Text variant="heading2" color="text">
-                      {t('delete.title')}
+                      {t('menu.language')}
                     </Text>
-                    <Box marginTop="xsPlus">
-                      <Text variant="body" color="textSecondary" marginVertical="l">
-                        {t('delete.body', {
-                          label: zones[deleteIndex ?? -1]?.label ?? t('delete.fallback'),
-                        })}
-                      </Text>
-                    </Box>
-                    <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
-                      <Box marginRight="m">
-                        <Button
-                          label={t('delete.cancel')}
-                          variant="ghost"
-                          size="sm"
-                          onPress={() => setPendingDeleteIndex(null)}
-                          icon={<X size={14} color={theme.colors.text} />}
-                        />
-                      </Box>
-                      <Button
-                        label={t('delete.confirm')}
-                        size="sm"
-                        onPress={() => {
-                          if (deleteIndex !== null) {
-                            deleteZone(deleteIndex);
-                            setPendingDeleteIndex(null);
-                          }
-                        }}
-                        backgroundColor="danger"
-                        borderColor="danger"
-                        icon={<Trash2 size={14} color={theme.colors.textInverse} />}
-                      />
+                    <Box marginTop="m">
+                      {languageOptions.map((option) => {
+                        const isSelected = option.value === selectedLanguage;
+                        return (
+                          <Pressable
+                            key={option.value}
+                            onPress={() => handleLanguageSelect(option.value)}
+                            style={({ pressed }) => ({
+                              opacity: pressed ? 0.85 : 1,
+                            })}
+                          >
+                            <Box
+                              flexDirection="row"
+                              justifyContent="space-between"
+                              alignItems="center"
+                              paddingVertical="m"
+                              backgroundColor="card"
+                            >
+                              <Box flexDirection="row" alignItems="center">
+                                <Text variant="body" color="textSecondary" marginEnd="m">
+                                  {option.flag}
+                                </Text>
+                                <Text variant="body" color="textSecondary" numberOfLines={1}>
+                                  {option.label}
+                                </Text>
+                              </Box>
+                              {isSelected ? (
+                                <Box
+                                  width={24}
+                                  height={24}
+                                  borderRadius="full"
+                                  alignItems="center"
+                                  justifyContent="center"
+                                  backgroundColor="primary"
+                                  marginStart="xl"
+                                >
+                                  <Check size={14} color={theme.colors.textInverse} />
+                                </Box>
+                              ) : null}
+                            </Box>
+                          </Pressable>
+                        );
+                      })}
                     </Box>
                   </Box>
                 </Pressable>
-              </Animated.View>
-            </Pressable>
-          ) : null}
-          {showLanguageModal ? (
-            <Pressable
-              onPress={() => setShowLanguageModal(false)}
-              style={{
-                position: 'absolute',
-                top: -topInset,
-                left: 0,
-                right: 0,
-                bottom: -bottomInset,
-                zIndex: 4,
-                justifyContent: 'center',
-                alignItems: 'center',
-                paddingTop: topInset,
-                paddingBottom: bottomInset,
-              }}
-            >
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: theme.colors.overlay,
-                  opacity: 1,
-                }}
-              />
-              <Pressable onPress={() => {}} style={{ minWidth: 250, alignSelf: 'center' }}>
-                <Box
-                  marginHorizontal="l"
-                  backgroundColor="card"
-                  borderRadius="l"
-                  borderWidth={1}
-                  borderColor="borderSubtle"
-                  padding="l"
-                  style={{
-                    shadowColor: '#000',
-                    shadowOpacity: 0.2,
-                    shadowRadius: 10,
-                    shadowOffset: { width: 0, height: 6 },
-                    elevation: 10,
-                  }}
-                >
-                  <Text variant="heading2" color="text">
-                    {t('menu.language')}
-                  </Text>
-                  <Box marginTop="m">
-                    {languageOptions.map((option) => {
-                      const isSelected = option.value === selectedLanguage;
-                      return (
-                        <Pressable
-                          key={option.value}
-                          onPress={() => handleLanguageSelect(option.value)}
-                          style={({ pressed }) => ({
-                            opacity: pressed ? 0.85 : 1,
-                          })}
-                        >
-                          <Box
-                            flexDirection="row"
-                            justifyContent="space-between"
-                            alignItems="center"
-                            paddingVertical="m"
-                            backgroundColor="card"
-                          >
-                            <Box flexDirection="row" alignItems="center">
-                              <Text variant="body" color="textSecondary" marginEnd="m">
-                                {option.flag}
-                              </Text>
-                              <Text variant="body" color="textSecondary" numberOfLines={1}>
-                                {option.label}
-                              </Text>
-                            </Box>
-                            {isSelected ? (
-                              <Box
-                                width={24}
-                                height={24}
-                                borderRadius="full"
-                                alignItems="center"
-                                justifyContent="center"
-                                backgroundColor="primary"
-                                marginStart="xl"
-                              >
-                                <Check size={14} color={theme.colors.textInverse} />
-                              </Box>
-                            ) : null}
-                          </Box>
-                        </Pressable>
-                      );
-                    })}
-                  </Box>
-                </Box>
               </Pressable>
-            </Pressable>
-          ) : null}
+            ) : null}
 
-          <AddZoneOverlay
-            visible={showForm}
-            usedTimeZones={usedTimeZones}
-            existingZones={zones}
-            initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
-            mode={draftIndex !== null ? 'edit' : 'add'}
-            onSelectExisting={(index) => {
-              setDraftIndex(index);
-              setActionIndex(null);
-              setShowForm(true);
-            }}
-            onReturnToAdd={() => {
-              setDraftIndex(null);
-            }}
-            startedInEdit={formOrigin === 'edit'}
-            onSubmit={submitZone}
-            onSubmitAtStart={submitZoneAtStart}
-            onClose={() => {
-              setShowForm(false);
-              setDraftIndex(null);
-              longPressFlag.current = false;
-            }}
-          />
-          <PrivacyPolicyModal
-            visible={showPrivacyPolicy}
-            themeMode={mode}
-            onClose={() => setShowPrivacyPolicy(false)}
-          />
-          <UserTimeBar
-            time={currentTime}
-            onChange={() => {
-              setPaused(true);
-              setShowPicker(true);
-            }}
-            onReset={resetToRealTime}
-          />
-          {showPicker ? (
-            <DateTimePicker
-              value={currentTime}
-              mode="time"
-              is24Hour
-              display="default"
-              onChange={onChangeTime}
+            <AddZoneOverlay
+              visible={showForm}
+              usedTimeZones={usedTimeZones}
+              existingZones={zones}
+              initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
+              mode={draftIndex !== null ? 'edit' : 'add'}
+              onSelectExisting={(index) => {
+                setDraftIndex(index);
+                setActionIndex(null);
+                setShowForm(true);
+              }}
+              onReturnToAdd={() => {
+                setDraftIndex(null);
+              }}
+              startedInEdit={formOrigin === 'edit'}
+              onSubmit={submitZone}
+              onSubmitAtStart={submitZoneAtStart}
+              onClose={() => {
+                setShowForm(false);
+                setDraftIndex(null);
+                longPressFlag.current = false;
+              }}
             />
-          ) : null}
-        </Box>
+            <PrivacyPolicyModal
+              visible={showPrivacyPolicy}
+              themeMode={mode}
+              onClose={() => setShowPrivacyPolicy(false)}
+            />
+            <UserTimeBar
+              time={currentTime}
+              onChange={() => {
+                setPaused(true);
+                setShowPicker(true);
+              }}
+              onReset={resetToRealTime}
+            />
+            {showPicker ? (
+              <DateTimePicker
+                value={currentTime}
+                mode="time"
+                is24Hour
+                display="default"
+                onChange={onChangeTime}
+              />
+            ) : null}
+          </Box>
         ) : (
           <Box flex={1} alignItems="center" justifyContent="center">
-            <Image
-              source={splashImage}
-              resizeMode="contain"
-              style={{ width: 220, height: 220 }}
-            />
+            <Image source={splashImage} resizeMode="contain" style={{ width: 220, height: 220 }} />
           </Box>
         )}
       </SafeAreaView>

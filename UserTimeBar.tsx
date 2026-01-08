@@ -128,10 +128,10 @@ export function UserTimeBar({ time, onChange, onReset }: UserTimeBarProps) {
         paddingHorizontal="sPlus"
         paddingVertical="xs"
         borderRadius="s"
-        backgroundColor="card"
+        backgroundColor="badgeToday"
         marginBottom="sPlus"
       >
-        <Text variant="label" color="accent">
+        <Text variant="label" color="textInverse">
           {formatUserDay(time, intlLocale)}
         </Text>
       </Box>

@@ -111,7 +111,7 @@ export const Button: React.FC<ButtonProps> = ({
     backgroundColor ?? (variant === 'primary' ? 'primary' : 'transparent');
 
   const resolvedBorderColor: keyof AppTheme['colors'] =
-    borderColor ?? (variant === 'primary' ? 'primaryStrong' : 'borderSubtle');
+    borderColor ?? (variant === 'primary' ? 'primary' : 'borderSubtle');
 
   const resolvedBorderWidth = borderWidth ?? (variant === 'ghost' ? 1 : 0);
 

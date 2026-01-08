@@ -44,6 +44,7 @@ function cssVars(name, theme) {
   --card: ${c.card};
   --card-border: ${c.borderSubtle};
   --text: ${c.text};
+  --text-inverse: ${c.textInverse};
   --text-secondary: ${c.textSecondary};
   --muted: ${c.muted};
   --accent: ${c.accent};
@@ -67,7 +68,7 @@ function buildCss(lightTheme, darkTheme) {
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   margin: 0;
-  background: radial-gradient(circle at 10% 10%, var(--bg-alt), var(--bg));
+  background: var(--bg);
   color: var(--text);
 }
 .page {
@@ -88,6 +89,7 @@ header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap-reverse;
   margin-bottom: 18px;
   gap: 12px;
 }
@@ -100,7 +102,7 @@ h1 {
 h2 {
   font-size: 20px;
   margin: 28px 0 10px;
-  color: var(--accent);
+  color: var(--primary);
 }
 p,
 ul {
@@ -128,6 +130,7 @@ li {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  margin-left: auto;
 }
 .lang-switcher {
   display: none;
@@ -136,7 +139,7 @@ li {
   flex-wrap: wrap;
   max-width: 100%;
   padding: 6px;
-  border-radius: 14px;
+  border-radius: 999px;
   border: 1px solid var(--card-border);
   background: var(--bg-alt);
 }
@@ -155,8 +158,8 @@ li {
   transition: background 120ms ease, color 120ms ease, transform 120ms ease, opacity 120ms ease;
 }
 .lang-switcher a[aria-current='true'] {
-  background: var(--text);
-  color: var(--card);
+  background: var(--accent);
+  color: var(--text-inverse);
 }
 .lang-switcher a:hover {
   transform: translateY(-1px);
@@ -188,30 +191,13 @@ li {
   transform: translateY(0);
   opacity: 0.92;
 }
-@media (max-width: 640px) {
-  header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .controls {
-    width: 100%;
-    justify-content: flex-start;
-  }
-  .lang-switcher {
-    width: 100%;
-  }
-  .toggle {
-    width: 100%;
-    justify-content: space-between;
-  }
-}
 footer {
   margin-top: 26px;
   font-size: 13px;
   color: var(--muted);
 }
 a {
-  color: var(--accent);
+  color: var(--primary);
   text-decoration: none;
 }
 a:hover {

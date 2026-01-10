@@ -87,7 +87,7 @@ export function AddZoneOverlay({
   const insets = useSafeAreaInsets();
   const bottomInset = insets.bottom;
   const topInset = insets.top;
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const [isRendered, setIsRendered] = useState(visible);
   const slideAnimation = useRef(new Animated.Value(visible ? 1 : 0)).current;
   const [label, setLabel] = useState('');
@@ -97,6 +97,7 @@ export function AddZoneOverlay({
   const [error, setError] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [labelWasCleared, setLabelWasCleared] = useState(false);
+  const [overlayLayout, setOverlayLayout] = useState({ width: 0, height: 0 });
   const searchInputRef = useRef<TextInput>(null);
   const searchAnchorRef = useRef<View>(null);
   const overlayRef = useRef<View>(null);
@@ -275,6 +276,11 @@ export function AddZoneOverlay({
     setLabelWasCleared(false);
   };
 
+  const closeSearchList = () => {
+    setIsSearchFocused(false);
+    searchInputRef.current?.blur();
+  };
+
   const handleSubmit = (insertAtStart = false) => {
     const trimmedLabel = label.trim();
     const trimmedTimeZone = normalizeTimeZoneId(timeZone.trim());
@@ -347,6 +353,7 @@ export function AddZoneOverlay({
       onReturnToAdd?.();
       setTimeZone(option.timeZoneId);
       setLabel(getCityLabel(option));
+      setLabelWasCleared(false);
       setSearch(option.label);
       setError('');
       setIsSearchFocused(false);
@@ -356,6 +363,7 @@ export function AddZoneOverlay({
     if (existingMatch && !startedInEdit) {
       const normalized = normalizeTimeZoneId(existingMatch.zone.timeZone);
       setLabel(existingMatch.zone.label);
+      setLabelWasCleared(false);
       setTimeZone(normalized);
       setMembersInput(existingMatch.zone.members?.join(', ') ?? '');
       setSearch(option.label);
@@ -367,6 +375,7 @@ export function AddZoneOverlay({
 
     setTimeZone(option.timeZoneId);
     setLabel(getCityLabel(option));
+    setLabelWasCleared(false);
     setSearch(option.label);
     setError('');
     setIsSearchFocused(false);
@@ -439,6 +448,63 @@ export function AddZoneOverlay({
     inputRange: [0, 1],
     outputRange: [0, 1],
   });
+  const overlayWidth = overlayLayout.width || windowWidth;
+  const overlayHeight = overlayLayout.height || windowHeight;
+  const closeAreaStyles: { key: string; style: object }[] = [];
+
+  if (isSearchFocused && dropdownAnchor && overlayWidth > 0 && overlayHeight > 0) {
+    const dropdownTop = dropdownAnchor.y + dropdownAnchor.height;
+    const dropdownBottom = Math.min(dropdownTop + dropdownHeight, overlayHeight);
+    const middleHeight = Math.max(0, dropdownBottom - dropdownAnchor.y);
+    const rightEdge = dropdownAnchor.x + dropdownAnchor.width;
+    const rightWidth = Math.max(0, overlayWidth - rightEdge);
+
+    if (dropdownAnchor.y > 0) {
+      closeAreaStyles.push({
+        key: 'top',
+        style: { position: 'absolute', top: 0, left: 0, right: 0, height: dropdownAnchor.y },
+      });
+    }
+
+    if (dropdownAnchor.x > 0 && middleHeight > 0) {
+      closeAreaStyles.push({
+        key: 'left',
+        style: {
+          position: 'absolute',
+          top: dropdownAnchor.y,
+          left: 0,
+          width: dropdownAnchor.x,
+          height: middleHeight,
+        },
+      });
+    }
+
+    if (rightWidth > 0 && middleHeight > 0) {
+      closeAreaStyles.push({
+        key: 'right',
+        style: {
+          position: 'absolute',
+          top: dropdownAnchor.y,
+          left: rightEdge,
+          width: rightWidth,
+          height: middleHeight,
+        },
+      });
+    }
+
+    if (overlayHeight - dropdownBottom > 0) {
+      closeAreaStyles.push({
+        key: 'bottom',
+        style: {
+          position: 'absolute',
+          top: dropdownBottom,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        },
+      });
+    }
+  }
 
   return (
     <Box
@@ -451,6 +517,12 @@ export function AddZoneOverlay({
       pointerEvents="box-none"
       zIndex={3}
       ref={overlayRef}
+      onLayout={(event) => {
+        const { width, height } = event.nativeEvent.layout;
+        setOverlayLayout((prev) =>
+          prev.width === width && prev.height === height ? prev : { width, height },
+        );
+      }}
     >
       <Pressable
         style={{
@@ -460,10 +532,7 @@ export function AddZoneOverlay({
           left: 0,
           right: 0,
         }}
-        onPress={() => {
-          setIsSearchFocused(false);
-          searchInputRef.current?.blur();
-        }}
+        onPress={closeSearchList}
       >
         <Animated.View
           style={{
@@ -684,6 +753,24 @@ export function AddZoneOverlay({
           </Box>
         </Box>
       </AnimatedBox>
+      {closeAreaStyles.length > 0 ? (
+        <View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 3,
+            elevation: 14,
+          }}
+        >
+          {closeAreaStyles.map(({ key, style }) => (
+            <Pressable key={key} onPress={closeSearchList} style={style} />
+          ))}
+        </View>
+      ) : null}
       {isSearchFocused && dropdownAnchor ? (
         <Box
           borderWidth={1}

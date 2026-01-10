@@ -16,15 +16,15 @@
   },
   "errors": {
     "missingSelection": "Wybierz strefę czasową i podaj etykietę.",
-    "shortenLabelAndMembers": "Skróć etykietę i listę członków.",
+    "shortenLabelAndMembers": "Skróć etykietę i notatkę.",
     "shortenLabel": "Skróć etykietę.",
-    "shortenMembers": "Skróć listę członków.",
-    "invalidTimeZone": "Nieprawidłowy identyfikator strefy. Użyj nazw IANA, np. America/New_York.",
+    "shortenMembers": "Skróć notatkę.",
+    "invalidTimeZone": "Taka strefa czasowa nie figuruje na liście. Spróbuj innego miasta, kraju lub przesunięcia względem UTC.",
     "maxCharacters": "Maks. {{limit}} znaków.",
     "provideLabel": "Podaj etykietę."
   },
   "list": {
-    "empty": "Brak nieużywanych stref pasujących do wyszukiwania."
+    "empty": "Taka strefa czasowa nie figuruje na liście. Spróbuj innego miasta, kraju lub przesunięcia względem UTC."
   },
   "badge": {
     "added": "Dodano"

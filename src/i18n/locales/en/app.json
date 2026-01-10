@@ -25,7 +25,7 @@
     "delete": "Delete"
   },
   "members": {
-    "empty": "No members listed"
+    "empty": "No note yet"
   },
   "accessibility": {
     "menuToggle": "Toggle menu",

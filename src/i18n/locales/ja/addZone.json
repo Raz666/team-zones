@@ -16,15 +16,15 @@
   },
   "errors": {
     "missingSelection": "タイムゾーンを選択し、ラベルを入力してください。",
-    "shortenLabelAndMembers": "ラベルとメンバー一覧を短くしてください。",
+    "shortenLabelAndMembers": "ラベルとメモを短くしてください。",
     "shortenLabel": "ラベルを短くしてください。",
-    "shortenMembers": "メンバー一覧を短くしてください。",
-    "invalidTimeZone": "無効なタイムゾーンIDです。America/New_York のような IANA 名を使ってください。",
+    "shortenMembers": "メモを短くしてください。",
+    "invalidTimeZone": "一覧に見つかりませんでした。別の都市名や国名、またはUTCオフセットで検索してみてください。",
     "maxCharacters": "最大 {{limit}} 文字。",
     "provideLabel": "ラベルを入力してください。"
   },
   "list": {
-    "empty": "未使用のタイムゾーンが見つかりません。"
+    "empty": "一覧に見つかりませんでした。別の都市名や国名、またはUTCオフセットで検索してみてください。"
   },
   "badge": {
     "added": "追加済み"

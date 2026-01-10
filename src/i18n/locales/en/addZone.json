@@ -16,15 +16,15 @@
   },
   "errors": {
     "missingSelection": "Select a time zone and provide a label.",
-    "shortenLabelAndMembers": "Shorten the label and list of members to continue.",
+    "shortenLabelAndMembers": "Shorten the label and note to continue.",
     "shortenLabel": "Shorten the label to continue.",
-    "shortenMembers": "Shorten the list of members to continue.",
-    "invalidTimeZone": "Invalid time zone id. Use IANA names like America/New_York.",
+    "shortenMembers": "Shorten the note to continue.",
+    "invalidTimeZone": "No matching time zone found. Try a different city, country, or UTC offset.",
     "maxCharacters": "Max {{limit}} characters?",
     "provideLabel": "Please provide a label."
   },
   "list": {
-    "empty": "No unused time zones match."
+    "empty": "No matching time zone found. Try a different city, country, or UTC offset."
   },
   "badge": {
     "added": "Added"

@@ -11,14 +11,14 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B132B"
+      "backgroundColor": "#04010B"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.razart.teamzones"
     },
     "androidStatusBar": {
-      "backgroundColor": "#0B132B",
+      "backgroundColor": "#04010B",
       "barStyle": "light-content",
       "translucent": false
     },
@@ -27,7 +27,7 @@
       "icon": "./assets/icon.png",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0B132B"
+        "backgroundColor": "#04010B"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -35,8 +35,8 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "themeColor": "#0B132B",
-      "backgroundColor": "#0B132B"
+      "themeColor": "#04010B",
+      "backgroundColor": "#04010B"
     },
     "extra": {
       "eas": {

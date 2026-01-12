@@ -410,8 +410,8 @@ export function AddZoneOverlay({
   };
 
   const dropdownRowHeight = 56;
-  const dropdownMaxHeight = 200;
-  const dropdownCount = Math.min(availableOptions.length, 20);
+  const dropdownMaxHeight = Math.floor(windowHeight * 0.4);
+  const dropdownCount = availableOptions.length;
   const dropdownHeight = Math.min(
     Math.max(dropdownCount, 1) * dropdownRowHeight,
     dropdownMaxHeight,
@@ -792,7 +792,7 @@ export function AddZoneOverlay({
           }}
         >
           <FlatList
-            data={availableOptions.slice(0, 20)}
+            data={availableOptions}
             keyExtractor={(item: TimeZoneOption) => item.id}
             scrollEnabled
             nestedScrollEnabled

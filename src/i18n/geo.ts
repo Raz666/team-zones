@@ -1,5 +1,7 @@
 import i18n from 'i18next';
 
+import jaGeoHiragana from './locales/ja/geo-hiragana.json';
+
 function stripDiacritics(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -24,6 +26,31 @@ function normalizeCityName(value: string): string {
     .trim();
 }
 
+type GeoHiraganaNamespace = {
+  region?: Record<string, string>;
+  country?: Record<string, string>;
+  city?: Record<string, string>;
+};
+
+const GEO_HIRAGANA_BY_LANG: Record<string, GeoHiraganaNamespace> = {
+  ja: jaGeoHiragana as GeoHiraganaNamespace,
+};
+
+function isJapaneseLang(lang: string): boolean {
+  const key = lang.toLowerCase();
+  return key === 'ja' || key.startsWith('ja-');
+}
+
+function getGeoHiraganaValue(
+  namespace: keyof GeoHiraganaNamespace,
+  key: string,
+  lang: string,
+): string | undefined {
+  if (!key || !lang) return undefined;
+  if (!isJapaneseLang(lang)) return undefined;
+  return GEO_HIRAGANA_BY_LANG.ja?.[namespace]?.[key] || undefined;
+}
+
 export function countryKeyFromName(name: string): string {
   return slugify(name);
 }
@@ -35,6 +62,18 @@ export function regionKeyFromName(name: string): string {
 export function cityKeyFromName(name: string): string {
   const normalized = normalizeCityName(name);
   return slugify(normalized);
+}
+
+export function getCityHiraganaByKey(key: string, lang: string): string | undefined {
+  return getGeoHiraganaValue('city', key, lang);
+}
+
+export function getCountryHiraganaByKey(key: string, lang: string): string | undefined {
+  return getGeoHiraganaValue('country', key, lang);
+}
+
+export function getRegionHiraganaByKey(key: string, lang: string): string | undefined {
+  return getGeoHiraganaValue('region', key, lang);
 }
 
 export function translateCountryName(name: string, lang: string): string {

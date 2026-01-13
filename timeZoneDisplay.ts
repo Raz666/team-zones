@@ -3,6 +3,10 @@ import { TIMEZONE_COUNTRIES } from './timeZoneCountries';
 import { normalizeTimeZoneId } from './timeZoneUtils';
 import {
   cityKeyFromName,
+  countryKeyFromName,
+  getCityHiraganaByKey,
+  getCountryHiraganaByKey,
+  getRegionHiraganaByKey,
   regionKeyFromName,
   translateCityName,
   translateCountryName,
@@ -239,6 +243,10 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
   const regionKey = region ? regionKeyFromName(region) : undefined;
   const regionLabel = region ? translateRegionName(region, langKey) : undefined;
   const country = countryRaw ? translateCountryName(countryRaw, langKey) : undefined;
+  const countryKey = countryRaw ? countryKeyFromName(countryRaw) : '';
+  const cityHiragana = cityKey ? getCityHiraganaByKey(cityKey, langKey) : undefined;
+  const regionHiragana = regionKey ? getRegionHiraganaByKey(regionKey, langKey) : undefined;
+  const countryHiragana = countryKey ? getCountryHiraganaByKey(countryKey, langKey) : undefined;
   const cityDisplay = cityLabel || cityRaw;
   const label = buildOptionLabel(cityDisplay, district, country, regionLabel, regionKey);
   const countryTerms = getCountrySearchTerms(countryRaw);
@@ -246,6 +254,9 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
     cityLabel,
     cityRaw,
     regionLabel,
+    cityHiragana,
+    regionHiragana,
+    countryHiragana,
     ...countryTerms,
   ]);
 
@@ -313,6 +324,10 @@ export function getTimeZoneOptions(
     const region = baseOption.region;
     const regionKey = baseOption.regionKey;
     const regionLabel = baseOption.regionLabel;
+    const countryKey = countryRaw ? countryKeyFromName(countryRaw) : '';
+    const cityHiragana = cityKey ? getCityHiraganaByKey(cityKey, langKey) : undefined;
+    const regionHiragana = regionKey ? getRegionHiraganaByKey(regionKey, langKey) : undefined;
+    const countryHiragana = countryKey ? getCountryHiraganaByKey(countryKey, langKey) : undefined;
     const baseCityRaw = baseOption.cityRaw ?? baseOption.city;
     const legacyCity =
       useZoneIdAsId && baseCityRaw.toLowerCase() !== cityRaw.toLowerCase()
@@ -325,6 +340,9 @@ export function getTimeZoneOptions(
       cityLabel,
       cityRaw,
       regionLabel,
+      cityHiragana,
+      regionHiragana,
+      countryHiragana,
       ...(alias.searchTerms ?? []),
       ...countryTerms,
       legacyCity,

@@ -1,5 +1,5 @@
 import './src/i18n';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, Image, Pressable } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -30,7 +30,9 @@ import {
 } from 'lucide-react-native';
 import { getIntlLocale } from './src/i18n/intlLocale';
 import { isSupportedLanguage } from './src/i18n/supportedLanguages';
-import { FlagsProvider } from './src/flags';
+import { FlagsProvider, useFlag } from './src/flags';
+import { FlagsDebugModal } from './src/flags/debug/FlagsDebugModal';
+import { useMultiTap } from './src/flags/debug/useMultiTap';
 
 type ZoneGroup = {
   label: string;
@@ -108,6 +110,7 @@ function AppContent() {
   const [draftIndex, setDraftIndex] = useState<number | null>(null);
   const [formOrigin, setFormOrigin] = useState<'add' | 'edit'>('add');
   const [exitArmed, setExitArmed] = useState(false);
+  const [showFlagsDebug, setShowFlagsDebug] = useState(false);
   const longPressFlag = useRef(false);
   const actionAnimRefs = useRef<Record<number, Animated.Value>>({});
   const actionVisibility = useRef<Record<number, boolean>>({});
@@ -118,6 +121,18 @@ function AppContent() {
   const selectedLanguage = isSupportedLanguage(rawLanguage) ? rawLanguage : 'en';
   const intlLocale = getIntlLocale(selectedLanguage);
   const appIsReady = hydrated && themeHydrated;
+  const debugMenuEnabled = useFlag('debugMenu');
+  const allowFlagsDebug = __DEV__ || debugMenuEnabled;
+  const handleFlagsDebugTrigger = useCallback(() => {
+    if (allowFlagsDebug) {
+      setShowFlagsDebug(true);
+    }
+  }, [allowFlagsDebug]);
+  const handleTitleTap = useMultiTap({
+    taps: 7,
+    windowMs: 3000,
+    onTrigger: handleFlagsDebugTrigger,
+  });
 
   useEffect(() => {
     if (paused) return;
@@ -628,7 +643,9 @@ function AppContent() {
               marginBottom="l"
               style={{ zIndex: 2, position: 'relative' }}
             >
-              <Text variant="heading2">{t('title')}</Text>
+              <Text variant="heading2" onPress={handleTitleTap} suppressHighlighting>
+                {t('title')}
+              </Text>
               <Box flexDirection="row" alignItems="center">
                 <Box style={{ position: 'relative' }}>
                   <Button
@@ -976,6 +993,7 @@ function AppContent() {
                 </Pressable>
               </Pressable>
             ) : null}
+            <FlagsDebugModal visible={showFlagsDebug} onClose={() => setShowFlagsDebug(false)} />
 
             <AddZoneOverlay
               visible={showForm}

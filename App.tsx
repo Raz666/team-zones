@@ -30,6 +30,7 @@ import {
 } from 'lucide-react-native';
 import { getIntlLocale } from './src/i18n/intlLocale';
 import { isSupportedLanguage } from './src/i18n/supportedLanguages';
+import { FlagsProvider } from './src/flags';
 
 type ZoneGroup = {
   label: string;
@@ -1035,7 +1036,9 @@ function AppContent() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <AppContent />
+      <FlagsProvider>
+        <AppContent />
+      </FlagsProvider>
     </SafeAreaProvider>
   );
 }

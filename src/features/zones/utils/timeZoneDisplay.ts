@@ -11,7 +11,7 @@ import {
   translateCityName,
   translateCountryName,
   translateRegionName,
-} from './src/i18n/geo';
+} from '../../../i18n/geo';
 
 export type TimeZoneOption = {
   id: string;

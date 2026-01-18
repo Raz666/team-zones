@@ -9,10 +9,10 @@ import { ThemeProvider } from '@shopify/restyle';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { useTranslation } from 'react-i18next';
 
-import { AddZoneOverlay, ZoneDraft } from './AddZoneOverlay';
-import { UserTimeBar } from './UserTimeBar';
-import { PrivacyPolicyModal } from './PrivacyPolicyModal';
-import { dayTagForZone, normalizeTimeZoneId } from './timeZoneUtils';
+import { AddZoneOverlay, ZoneDraft } from './src/features/zones/components/AddZoneOverlay';
+import { UserTimeBar } from './src/features/zones/components/UserTimeBar';
+import { PrivacyPolicyModal } from './src/features/settings/components/PrivacyPolicyModal';
+import { dayTagForZone, normalizeTimeZoneId } from './src/features/zones/utils/timeZoneUtils';
 import { Box, Button, Text } from './src/theme/components';
 import type { AppTheme } from './src/theme/themes';
 import { darkTheme, lightTheme } from './src/theme/themes';

@@ -14,18 +14,18 @@ import { AlertTriangle, ArrowUp, Check, Plus, X } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import type { AppTheme } from './src/theme/themes';
-import { Box, Button, Text } from './src/theme/components';
+import type { AppTheme } from '../../../theme/themes';
+import { Box, Button, Text } from '../../../theme/components';
 import {
   formatTimeInZone,
   formatUtcOffsetLabel,
   getTimeZoneOption,
   getTimeZoneOptions,
-} from './timeZoneDisplay';
-import type { TimeZoneOption } from './timeZoneDisplay';
-import { TIMEZONE_ALIASES } from './timeZoneAliases';
-import { IANA_TIMEZONES } from './timezones';
-import { normalizeTimeZoneId } from './timeZoneUtils';
+} from '../utils/timeZoneDisplay';
+import type { TimeZoneOption } from '../utils/timeZoneDisplay';
+import { TIMEZONE_ALIASES } from '../utils/timeZoneAliases';
+import { IANA_TIMEZONES } from '../utils/timezones';
+import { normalizeTimeZoneId } from '../utils/timeZoneUtils';
 
 export type ZoneDraft = {
   label: string;

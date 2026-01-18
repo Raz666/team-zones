@@ -4,11 +4,11 @@ import { useTheme } from '@shopify/restyle';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
-import type { AppTheme } from './src/theme/themes';
-import { Box, Button, Text } from './src/theme/components';
+import type { AppTheme } from '../../../theme/themes';
+import { Box, Button, Text } from '../../../theme/components';
 import { Clock8, History, Pause, Play } from 'lucide-react-native';
-import { getIntlLocale } from './src/i18n/intlLocale';
-import { isSupportedLanguage } from './src/i18n/supportedLanguages';
+import { getIntlLocale } from '../../../i18n/intlLocale';
+import { isSupportedLanguage } from '../../../i18n/supportedLanguages';
 
 type UserTimeBarProps = {
   time: Date;

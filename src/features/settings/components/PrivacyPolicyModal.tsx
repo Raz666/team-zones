@@ -14,13 +14,13 @@ import { X } from 'lucide-react-native';
 import { Asset } from 'expo-asset';
 import { useTranslation } from 'react-i18next';
 
-import type { AppTheme } from './src/theme/themes';
-import { Box, Button, Text } from './src/theme/components';
+import type { AppTheme } from '../../../theme/themes';
+import { Box, Button, Text } from '../../../theme/components';
 
 const privacyPolicyModules = {
-  en: require('./docs/privacy-policy.en.html'),
-  pl: require('./docs/privacy-policy.pl.html'),
-  ja: require('./docs/privacy-policy.ja.html'),
+  en: require('../../../../docs/privacy-policy.en.html'),
+  pl: require('../../../../docs/privacy-policy.pl.html'),
+  ja: require('../../../../docs/privacy-policy.ja.html'),
 } as const;
 
 const resolvePrivacyPolicyModule = (language?: string | null) => {

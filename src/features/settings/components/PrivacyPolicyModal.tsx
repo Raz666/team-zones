@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Linking,
   Modal,
   Pressable,
   useWindowDimensions,
@@ -95,6 +96,15 @@ export function PrivacyPolicyModal({
     })();
   `;
   }, [themeMode]);
+
+  const handleShouldStartLoad = (request: { url: string }) => {
+    if (!request.url) return true;
+    if (request.url.startsWith('mailto:')) {
+      Linking.openURL(request.url).catch(() => {});
+      return false;
+    }
+    return true;
+  };
 
   useEffect(() => {
     if (!visible) return;
@@ -221,6 +231,7 @@ export function PrivacyPolicyModal({
                   setIsContentReady(true);
                 }}
                 injectedJavaScriptBeforeContentLoaded={injectedTheme}
+                onShouldStartLoadWithRequest={handleShouldStartLoad}
               />
               {!isContentReady ? (
                 <Box

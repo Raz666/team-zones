@@ -33,6 +33,7 @@ import { isSupportedLanguage } from './src/i18n/supportedLanguages';
 import { FlagsProvider, useFlag } from './src/flags';
 import { FlagsDebugModal } from './src/flags/debug/FlagsDebugModal';
 import { useMultiTap } from './src/flags/debug/useMultiTap';
+import { loadZones, saveZones } from './src/features/zones/storage/zonesRepository';
 
 type ZoneGroup = {
   label: string;
@@ -80,7 +81,6 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
 }
 
 function AppContent() {
-  const STORAGE_KEY = 'teamzones:zones:v1';
   const THEME_STORAGE_KEY = 'teamzones:theme:v1';
   const LANGUAGE_STORAGE_KEY = 'teamzones:language:v1';
   const { t, i18n } = useTranslation('app');
@@ -144,15 +144,8 @@ function AppContent() {
   useEffect(() => {
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            setZones(parsed as ZoneGroup[]);
-          }
-        }
-      } catch (err) {
-        console.warn('Failed to load saved zones', err);
+        const storedZones = await loadZones();
+        setZones(storedZones);
       } finally {
         setHydrated(true);
       }
@@ -176,9 +169,7 @@ function AppContent() {
 
   useEffect(() => {
     if (!hydrated) return;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(zones)).catch((err) => {
-      console.warn('Failed to save zones', err);
-    });
+    void saveZones(zones);
   }, [zones, hydrated]);
 
   useEffect(() => {

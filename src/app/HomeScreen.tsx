@@ -30,13 +30,10 @@ import { isSupportedLanguage } from '../i18n/supportedLanguages';
 import { useFlag } from '../flags';
 import { FlagsDebugModal } from '../flags/debug/FlagsDebugModal';
 import { useMultiTap } from '../flags/debug/useMultiTap';
-import { loadZones, saveZones } from '../features/zones/storage/zonesRepository';
+import { useZones } from '../features/zones/hooks/useZones';
+import type { Zone } from '../features/zones/storage/zonesRepository';
 
-type ZoneGroup = {
-  label: string;
-  timeZone: string;
-  members?: string[];
-};
+type ZoneGroup = Zone;
 
 type DayBadgeTag = 'yday' | 'today' | 'tomo';
 
@@ -93,8 +90,14 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const isDark = mode === 'dark';
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const [zones, setZones] = useState<ZoneGroup[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const {
+    zones,
+    hydrated,
+    addZone,
+    updateZone,
+    deleteZone: removeZone,
+    reorderZones,
+  } = useZones();
   const [showForm, setShowForm] = useState(false);
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -140,22 +143,6 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     const id = setInterval(() => setCurrentTime(new Date()), 30_000);
     return () => clearInterval(id);
   }, [paused]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const storedZones = await loadZones();
-        setZones(storedZones);
-      } finally {
-        setHydrated(true);
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    void saveZones(zones);
-  }, [zones, hydrated]);
 
   useEffect(() => {
     if (showForm || showPrivacyPolicy) {
@@ -330,31 +317,31 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   ];
 
   function submitZone(zone: ZoneDraft) {
-    setZones((prev) => {
-      if (draftIndex === null) {
-        return [...prev, zone];
-      }
-      return prev.map((item, idx) => (idx === draftIndex ? { ...item, ...zone } : item));
-    });
+    if (draftIndex === null) {
+      addZone(zone);
+    } else {
+      updateZone(draftIndex, zone);
+    }
     setShowForm(false);
     setDraftIndex(null);
     setActionIndex(null);
   }
 
   function submitZoneAtStart(zone: ZoneDraft) {
-    setZones((prev) => {
-      if (draftIndex === null) {
-        return [zone, ...prev];
-      }
-      return prev.map((item, idx) => (idx === draftIndex ? { ...item, ...zone } : item));
-    });
+    if (draftIndex === null) {
+      const fromIndex = zones.length;
+      addZone(zone);
+      reorderZones(fromIndex, 0);
+    } else {
+      updateZone(draftIndex, zone);
+    }
     setShowForm(false);
     setDraftIndex(null);
     setActionIndex(null);
   }
 
   function deleteZone(index: number) {
-    setZones((prev) => prev.filter((_, i) => i !== index));
+    removeZone(index);
     setActionIndex(null);
     if (draftIndex === index) {
       setDraftIndex(null);
@@ -381,12 +368,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
 
   async function onReordered(from: number, to: number) {
     setActionIndex(null);
-    setZones((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
-    });
+    reorderZones(from, to);
   }
 
   function renderItem({

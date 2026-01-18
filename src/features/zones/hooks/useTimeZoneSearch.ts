@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 
-import { formatUtcOffsetLabel, getTimeZoneOptions } from '../utils/timeZoneDisplay';
+import { getTimeZoneOptions } from '../utils/timeZoneDisplay';
+import { filterTimeZoneOptions } from '../utils/timeZoneSearch';
 import type { TimeZoneOption } from '../utils/timeZoneDisplay';
 import { TIMEZONE_ALIASES } from '../utils/timeZoneAliases';
 import { IANA_TIMEZONES } from '../utils/timezones';
@@ -126,20 +127,10 @@ export function useTimeZoneSearch({ existingZones, usedTimeZones, language }: Us
     return deduped.join(', ');
   };
 
-  const availableOptions = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return allTimeZoneOptions;
-    return allTimeZoneOptions.filter((option) => {
-      if (option.searchText.includes(term)) return true;
-      const offsetLabel = formatUtcOffsetLabel(option.timeZoneId, now).toLowerCase();
-      if (offsetLabel.includes(term)) return true;
-      if (offsetLabel.startsWith('utc')) {
-        const gmtLabel = `gmt${offsetLabel.slice(3)}`;
-        if (gmtLabel.includes(term)) return true;
-      }
-      return false;
-    });
-  }, [allTimeZoneOptions, now, search]);
+  const availableOptions = useMemo(
+    () => filterTimeZoneOptions(allTimeZoneOptions, search, now),
+    [allTimeZoneOptions, now, search],
+  );
 
   return {
     search,

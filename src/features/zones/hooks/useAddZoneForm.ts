@@ -5,6 +5,7 @@ import type { TextInput } from 'react-native';
 import { getTimeZoneOption } from '../utils/timeZoneDisplay';
 import type { TimeZoneOption } from '../utils/timeZoneDisplay';
 import { normalizeTimeZoneId } from '../utils/timeZoneUtils';
+import { parseZoneMembers } from '../utils/zoneMembers';
 import type { Zone } from '../storage/zonesRepository';
 
 const normalizeLabelValue = (value: string) => value.trim().toLowerCase();
@@ -169,10 +170,7 @@ export function useAddZoneForm({
       setError(t('errors.invalidTimeZone'));
       return;
     }
-    const members = membersInput
-      .split(/[,\uFF0C\u3001\uFF64\uFE10\uFE50\uFE51\u060C]/)
-      .map((m) => m.trim())
-      .filter(Boolean);
+    const members = parseZoneMembers(membersInput);
 
     const submitAction = insertAtStart && !isEdit && onSubmitAtStart ? onSubmitAtStart : onSubmit;
 

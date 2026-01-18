@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type SetStateAction } from 'react';
 import { Animated, BackHandler, Dimensions, Easing, Image, Pressable } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -32,6 +32,7 @@ import { FlagsDebugModal } from '../flags/debug/FlagsDebugModal';
 import { useMultiTap } from '../flags/debug/useMultiTap';
 import { useZones } from '../features/zones/hooks/useZones';
 import type { Zone } from '../features/zones/storage/zonesRepository';
+import { homeUiInitialState, homeUiReducer } from '../features/zones/ui/homeUiReducer';
 
 type ZoneGroup = Zone;
 
@@ -98,22 +99,16 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     deleteZone: removeZone,
     reorderZones,
   } = useZones();
-  const [showForm, setShowForm] = useState(false);
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
-  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
   const [deleteModalRendered, setDeleteModalRendered] = useState(false);
-  const [draftIndex, setDraftIndex] = useState<number | null>(null);
-  const [formOrigin, setFormOrigin] = useState<'add' | 'edit'>('add');
   const [exitArmed, setExitArmed] = useState(false);
   const [showFlagsDebug, setShowFlagsDebug] = useState(false);
+  const [uiState, dispatchUi] = useReducer(homeUiReducer, homeUiInitialState);
   const longPressFlag = useRef(false);
   const actionAnimRefs = useRef<Record<number, Animated.Value>>({});
   const actionVisibility = useRef<Record<number, boolean>>({});
@@ -124,6 +119,12 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const selectedLanguage = isSupportedLanguage(rawLanguage) ? rawLanguage : 'en';
   const intlLocale = getIntlLocale(selectedLanguage);
   const appIsReady = hydrated && themeHydrated;
+  const showForm = uiState.activeModal === 'add' || uiState.activeModal === 'edit';
+  const showPrivacyPolicy = uiState.activeModal === 'privacy';
+  const showLanguageModal = uiState.activeModal === 'language';
+  const showMenu = uiState.menuOpen;
+  const pendingDeleteIndex = uiState.deleteIndex;
+  const draftIndex = uiState.editIndex;
   const debugMenuEnabled = useFlag('debugMenu');
   const allowFlagsDebug = __DEV__ || debugMenuEnabled;
   const handleFlagsDebugTrigger = useCallback(() => {
@@ -187,15 +188,15 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
         return false;
       }
       if (pendingDeleteIndex !== null) {
-        setPendingDeleteIndex(null);
+        dispatchUi({ type: 'CLEAR_DELETE' });
         return true;
       }
       if (showLanguageModal) {
-        setShowLanguageModal(false);
+        dispatchUi({ type: 'CLOSE_MODAL' });
         return true;
       }
       if (showMenu) {
-        setShowMenu(false);
+        dispatchUi({ type: 'SET_MENU', open: false });
         return true;
       }
       if (exitArmedRef.current) {
@@ -241,11 +242,8 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   });
 
   const openAddZone = () => {
-    setFormOrigin('add');
-    setShowMenu(false);
-    setDraftIndex(null);
+    dispatchUi({ type: 'OPEN_ADD' });
     setActionIndex(null);
-    setShowForm(true);
   };
 
   const languageOptions = [
@@ -257,7 +255,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     languageOptions.find((option) => option.value === selectedLanguage) ?? languageOptions[0];
 
   const handleLanguageSelect = (language: string) => {
-    setShowLanguageModal(false);
+    dispatchUi({ type: 'CLOSE_MODAL' });
     if (language !== selectedLanguage) {
       i18n.changeLanguage(language).catch((error) => {
         console.warn('Failed to change language', error);
@@ -278,7 +276,6 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
       subLabel: undefined,
       icon: <Plus size={18} color={theme.colors.text} />,
       onPress: () => {
-        setShowMenu(false);
         openAddZone();
       },
     },
@@ -301,8 +298,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
         : undefined,
       icon: <Languages size={18} color={theme.colors.text} />,
       onPress: () => {
-        setShowMenu(false);
-        setShowLanguageModal(true);
+        dispatchUi({ type: 'OPEN_LANGUAGE' });
       },
     },
     {
@@ -310,8 +306,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
       subLabel: undefined,
       icon: <FileText size={18} color={theme.colors.text} />,
       onPress: () => {
-        setShowMenu(false);
-        setShowPrivacyPolicy(true);
+        dispatchUi({ type: 'OPEN_PRIVACY' });
       },
     },
   ];
@@ -322,8 +317,8 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     } else {
       updateZone(draftIndex, zone);
     }
-    setShowForm(false);
-    setDraftIndex(null);
+    dispatchUi({ type: 'CLOSE_MODAL' });
+    dispatchUi({ type: 'SET_EDIT_INDEX', index: null });
     setActionIndex(null);
   }
 
@@ -335,8 +330,8 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     } else {
       updateZone(draftIndex, zone);
     }
-    setShowForm(false);
-    setDraftIndex(null);
+    dispatchUi({ type: 'CLOSE_MODAL' });
+    dispatchUi({ type: 'SET_EDIT_INDEX', index: null });
     setActionIndex(null);
   }
 
@@ -344,8 +339,8 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     removeZone(index);
     setActionIndex(null);
     if (draftIndex === index) {
-      setDraftIndex(null);
-      setShowForm(false);
+      dispatchUi({ type: 'SET_EDIT_INDEX', index: null });
+      dispatchUi({ type: 'CLOSE_MODAL' });
     }
   }
 
@@ -392,14 +387,12 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
     };
 
     const handleEdit = () => {
-      setFormOrigin('edit');
-      setDraftIndex(index);
-      setShowForm(true);
+      dispatchUi({ type: 'OPEN_EDIT', index });
       setActionIndex(null);
     };
 
     const handleDelete = () => {
-      setPendingDeleteIndex(index);
+      dispatchUi({ type: 'REQUEST_DELETE', index });
     };
 
     const wasVisible = actionVisibility.current[index] || false;
@@ -576,7 +569,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
           >
             {showMenu ? (
               <Pressable
-                onPress={() => setShowMenu(false)}
+                onPress={() => dispatchUi({ type: 'SET_MENU', open: false })}
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -602,7 +595,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                   <Button
                     iconOnly
                     accessibilityLabel={t('accessibility.menuToggle')}
-                    onPress={() => setShowMenu((prev) => !prev)}
+                    onPress={() => dispatchUi({ type: 'TOGGLE_MENU' })}
                     variant="primary"
                     size="sm"
                     radius="m"
@@ -761,7 +754,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
             ) : null}
             {deleteModalRendered ? (
               <Pressable
-                onPress={() => setPendingDeleteIndex(null)}
+                onPress={() => dispatchUi({ type: 'CLEAR_DELETE' })}
                 style={{
                   position: 'absolute',
                   top: -topInset,
@@ -827,7 +820,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                             label={t('delete.cancel')}
                             variant="ghost"
                             size="sm"
-                            onPress={() => setPendingDeleteIndex(null)}
+                            onPress={() => dispatchUi({ type: 'CLEAR_DELETE' })}
                             icon={<X size={14} color={theme.colors.text} />}
                           />
                         </Box>
@@ -837,7 +830,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                           onPress={() => {
                             if (deleteIndex !== null) {
                               deleteZone(deleteIndex);
-                              setPendingDeleteIndex(null);
+                              dispatchUi({ type: 'CLEAR_DELETE' });
                             }
                           }}
                           backgroundColor="danger"
@@ -852,7 +845,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
             ) : null}
             {showLanguageModal ? (
               <Pressable
-                onPress={() => setShowLanguageModal(false)}
+                onPress={() => dispatchUi({ type: 'CLOSE_MODAL' })}
                 style={{
                   position: 'absolute',
                   top: -topInset,
@@ -953,26 +946,25 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
               initialValue={draftIndex !== null ? zones[draftIndex] : undefined}
               mode={draftIndex !== null ? 'edit' : 'add'}
               onSelectExisting={(index) => {
-                setDraftIndex(index);
+                dispatchUi({ type: 'SET_EDIT_INDEX', index });
                 setActionIndex(null);
-                setShowForm(true);
               }}
               onReturnToAdd={() => {
-                setDraftIndex(null);
+                dispatchUi({ type: 'SET_EDIT_INDEX', index: null });
               }}
-              startedInEdit={formOrigin === 'edit'}
+              startedInEdit={uiState.activeModal === 'edit'}
               onSubmit={submitZone}
               onSubmitAtStart={submitZoneAtStart}
               onClose={() => {
-                setShowForm(false);
-                setDraftIndex(null);
+                dispatchUi({ type: 'CLOSE_MODAL' });
+                dispatchUi({ type: 'SET_EDIT_INDEX', index: null });
                 longPressFlag.current = false;
               }}
             />
             <PrivacyPolicyModal
               visible={showPrivacyPolicy}
               themeMode={mode}
-              onClose={() => setShowPrivacyPolicy(false)}
+              onClose={() => dispatchUi({ type: 'CLOSE_MODAL' })}
             />
             <UserTimeBar
               time={currentTime}

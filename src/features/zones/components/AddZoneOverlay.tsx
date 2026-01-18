@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   BackHandler,
@@ -16,44 +16,15 @@ import { useTranslation } from 'react-i18next';
 
 import type { AppTheme } from '../../../theme/themes';
 import { Box, Button, Text } from '../../../theme/components';
-import {
-  formatTimeInZone,
-  formatUtcOffsetLabel,
-  getTimeZoneOption,
-  getTimeZoneOptions,
-} from '../utils/timeZoneDisplay';
+import { formatTimeInZone, formatUtcOffsetLabel } from '../utils/timeZoneDisplay';
 import type { TimeZoneOption } from '../utils/timeZoneDisplay';
-import { TIMEZONE_ALIASES } from '../utils/timeZoneAliases';
-import { IANA_TIMEZONES } from '../utils/timezones';
-import { normalizeTimeZoneId } from '../utils/timeZoneUtils';
+import type { Zone } from '../storage/zonesRepository';
+import { useAddZoneForm } from '../hooks/useAddZoneForm';
+import { useTimeZoneSearch } from '../hooks/useTimeZoneSearch';
 
-export type ZoneDraft = {
-  label: string;
-  timeZone: string;
-  members?: string[];
-};
+export type ZoneDraft = Zone;
 
 const AnimatedBox = Animated.createAnimatedComponent(Box);
-
-const normalizeLabelValue = (value: string) => value.trim().toLowerCase();
-
-const getOptionLabelKeys = (option: TimeZoneOption) => {
-  const keys = new Set<string>();
-  const addKey = (value?: string) => {
-    if (!value) return;
-    const key = normalizeLabelValue(value);
-    if (key) keys.add(key);
-  };
-  addKey(option.city);
-  addKey(option.cityRaw);
-  addKey(option.cityLabel);
-  if (option.legacyCity) {
-    const legacyKey = normalizeLabelValue(option.legacyCity);
-    if (legacyKey) keys.add(legacyKey);
-  }
-  addKey(option.label);
-  return keys;
-};
 
 type AddZoneOverlayProps = {
   visible: boolean;
@@ -90,158 +61,73 @@ export function AddZoneOverlay({
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const [isRendered, setIsRendered] = useState(visible);
   const slideAnimation = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const [label, setLabel] = useState('');
-  const [timeZone, setTimeZone] = useState('');
-  const [membersInput, setMembersInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [error, setError] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [labelWasCleared, setLabelWasCleared] = useState(false);
   const [overlayLayout, setOverlayLayout] = useState({ width: 0, height: 0 });
   const searchInputRef = useRef<TextInput>(null);
   const searchAnchorRef = useRef<View>(null);
   const overlayRef = useRef<View>(null);
-  const skipResetOnClearRef = useRef(false);
   const [dropdownAnchor, setDropdownAnchor] = useState<{
     x: number;
     y: number;
     width: number;
     height: number;
   } | null>(null);
-  const isEdit = mode === 'edit' || Boolean(initialValue);
+  const {
+    search,
+    setSearch,
+    isSearchFocused,
+    setIsSearchFocused,
+    allTimeZoneOptions,
+    availableOptions,
+    now,
+    findExistingMatch,
+    isOptionUsed,
+    getCityLabel,
+    getLocationLine,
+    getOptionLabelKeys,
+  } = useTimeZoneSearch({ existingZones, usedTimeZones, language: i18n.language });
 
-  const allTimeZones: string[] = useMemo(() => {
-    const supportedRaw =
-      typeof (Intl as any).supportedValuesOf === 'function'
-        ? (Intl as any).supportedValuesOf('timeZone')
-        : [];
-    const supported: string[] = Array.isArray(supportedRaw) ? (supportedRaw as string[]) : [];
-    const base = supported.length > 0 ? supported : IANA_TIMEZONES;
-    return Array.from(new Set(base)).sort();
-  }, []);
-
-  const allTimeZoneOptions = useMemo(
-    () => getTimeZoneOptions(allTimeZones, TIMEZONE_ALIASES, i18n.language),
-    [allTimeZones, i18n.language],
-  );
-
-  const now = useMemo(() => new Date(), [isSearchFocused, search]);
-
-  const existingZonesById = useMemo(() => {
-    const map = new Map<string, { zone: ZoneDraft; index: number }[]>();
-    existingZones.forEach((zone, index) => {
-      const zoneId = normalizeTimeZoneId(zone.timeZone);
-      const list = map.get(zoneId) ?? [];
-      list.push({ zone, index });
-      map.set(zoneId, list);
-    });
-    return map;
-  }, [existingZones]);
-
-  const existingLabelsById = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    existingZones.forEach((zone) => {
-      const zoneId = normalizeTimeZoneId(zone.timeZone);
-      const labelKey = normalizeLabelValue(zone.label);
-      const labels = map.get(zoneId) ?? new Set<string>();
-      if (labelKey) {
-        labels.add(labelKey);
-      }
-      map.set(zoneId, labels);
-    });
-    return map;
-  }, [existingZones]);
-
-  const usedTimeZoneSet = useMemo(
-    () => new Set(usedTimeZones.map((tz) => normalizeTimeZoneId(tz))),
-    [usedTimeZones],
-  );
-
-  const findExistingMatch = (option: TimeZoneOption) => {
-    const matches = existingZonesById.get(option.timeZoneId);
-    if (!matches) return null;
-    const candidates = getOptionLabelKeys(option);
-    for (const match of matches) {
-      const labelKey = normalizeLabelValue(match.zone.label);
-      if (candidates.has(labelKey)) {
-        return match;
-      }
-    }
-    return null;
-  };
-
-  const isOptionUsed = (option: TimeZoneOption) => {
-    const labels = existingLabelsById.get(option.timeZoneId);
-    if (labels && labels.size > 0) {
-      for (const key of getOptionLabelKeys(option)) {
-        if (labels.has(key)) return true;
-      }
-      return false;
-    }
-    if (existingZones.length === 0) {
-      return usedTimeZoneSet.has(option.timeZoneId);
-    }
-    return false;
-  };
-
-  const getCityLabel = (option: TimeZoneOption) =>
-    option.cityLabel ?? option.cityRaw ?? option.city;
-
-  const getLocationLine = (option: TimeZoneOption) => {
-    const region =
-      option.regionKey && option.regionKey !== 'americas' ? option.regionLabel : undefined;
-    const parts = option.district ? [option.district, option.country] : [option.country, region];
-    const cleaned = parts.filter(Boolean) as string[];
-    const deduped = cleaned.filter((piece, index) => {
-      if (index === 0) return true;
-      return cleaned[index - 1].toLowerCase() !== piece.toLowerCase();
-    });
-    return deduped.join(', ');
-  };
-
-  const availableOptions = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return allTimeZoneOptions;
-    return allTimeZoneOptions.filter((option) => {
-      if (option.searchText.includes(term)) return true;
-      const offsetLabel = formatUtcOffsetLabel(option.timeZoneId, now).toLowerCase();
-      if (offsetLabel.includes(term)) return true;
-      if (offsetLabel.startsWith('utc')) {
-        const gmtLabel = `gmt${offsetLabel.slice(3)}`;
-        if (gmtLabel.includes(term)) return true;
-      }
-      return false;
-    });
-  }, [allTimeZoneOptions, now, search]);
-
-  useEffect(() => {
-    if (!visible) return;
-    if (initialValue) {
-      const normalized = normalizeTimeZoneId(initialValue.timeZone);
-      const option =
-        allTimeZoneOptions.find((item) => item.id === normalized) ??
-        getTimeZoneOption(normalized, i18n.language);
-      setLabel(initialValue.label);
-      setTimeZone(option.timeZoneId);
-      setMembersInput(initialValue.members?.join(', ') ?? '');
-      setSearch(option.label);
-      setError('');
-      setIsSearchFocused(false);
-      setLabelWasCleared(false);
-      return;
-    }
-    if (skipResetOnClearRef.current) {
-      skipResetOnClearRef.current = false;
-      return;
-    }
-    setLabel('');
-    setTimeZone('');
-    setMembersInput('');
-    setSearch('');
-    setError('');
-    setIsSearchFocused(false);
-    setLabelWasCleared(false);
-  }, [allTimeZoneOptions, visible, initialValue]);
+  const {
+    label,
+    membersInput,
+    error,
+    labelWasCleared,
+    isEdit,
+    labelLimit,
+    membersLimit,
+    labelLength,
+    membersLength,
+    isLabelTooLong,
+    isMembersTooLong,
+    handleSearchFocus,
+    handleSearchChange,
+    handleClearSearch,
+    handleLabelChange,
+    handleMembersChange,
+    handleFieldFocus,
+    handleSubmit,
+    handleCancel,
+    handleSelectTz,
+    closeSearchList,
+  } = useAddZoneForm({
+    visible,
+    mode,
+    initialValue,
+    startedInEdit,
+    onSubmit,
+    onSubmitAtStart,
+    onClose,
+    onSelectExisting,
+    onReturnToAdd,
+    allTimeZoneOptions,
+    language: i18n.language,
+    setSearch,
+    setIsSearchFocused,
+    searchInputRef,
+    findExistingMatch,
+    getOptionLabelKeys,
+    getCityLabel,
+    t,
+  });
 
   useEffect(() => {
     if (visible) {
@@ -267,64 +153,6 @@ export function AddZoneOverlay({
     });
   }, [slideAnimation, visible]);
 
-  const reset = () => {
-    setLabel('');
-    setTimeZone('');
-    setMembersInput('');
-    setSearch('');
-    setError('');
-    setLabelWasCleared(false);
-  };
-
-  const closeSearchList = () => {
-    setIsSearchFocused(false);
-    searchInputRef.current?.blur();
-  };
-
-  const handleSubmit = (insertAtStart = false) => {
-    const trimmedLabel = label.trim();
-    const trimmedTimeZone = normalizeTimeZoneId(timeZone.trim());
-    if (!trimmedLabel || !trimmedTimeZone) {
-      setError(t('errors.missingSelection'));
-      return;
-    }
-    if (isLabelTooLong || isMembersTooLong) {
-      if (isLabelTooLong && isMembersTooLong) {
-        setError(t('errors.shortenLabelAndMembers'));
-      } else if (isLabelTooLong) {
-        setError(t('errors.shortenLabel'));
-      } else {
-        setError(t('errors.shortenMembers'));
-      }
-      return;
-    }
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone: trimmedTimeZone }).format(new Date());
-    } catch {
-      setError(t('errors.invalidTimeZone'));
-      return;
-    }
-    const members = membersInput
-      .split(/[,\uFF0C\u3001\uFF64\uFE10\uFE50\uFE51\u060C]/)
-      .map((m) => m.trim())
-      .filter(Boolean);
-
-    const submitAction = insertAtStart && !isEdit && onSubmitAtStart ? onSubmitAtStart : onSubmit;
-
-    submitAction({
-      label,
-      timeZone: trimmedTimeZone,
-      members: members.length ? members : undefined,
-    });
-    reset();
-    onClose();
-  };
-
-  const handleCancel = () => {
-    reset();
-    onClose();
-  };
-
   useEffect(() => {
     if (!visible) return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -334,69 +162,8 @@ export function AddZoneOverlay({
     return () => subscription.remove();
   }, [handleCancel, visible]);
 
-  const handleSelectTz = (option: TimeZoneOption) => {
-    const existingMatch = findExistingMatch(option);
-    const isAutoEdit = !startedInEdit && mode === 'edit';
-    const currentLabelKey = normalizeLabelValue(initialValue?.label ?? label);
-    const optionKeys = getOptionLabelKeys(option);
-    const isSameSelection =
-      option.timeZoneId === timeZone && currentLabelKey && optionKeys.has(currentLabelKey);
-
-    if (isAutoEdit) {
-      if (isSameSelection) {
-        setSearch(option.label);
-        setError('');
-        setIsSearchFocused(false);
-        return;
-      }
-      skipResetOnClearRef.current = true;
-      onReturnToAdd?.();
-      setTimeZone(option.timeZoneId);
-      setLabel(getCityLabel(option));
-      setLabelWasCleared(false);
-      setSearch(option.label);
-      setError('');
-      setIsSearchFocused(false);
-      return;
-    }
-
-    if (existingMatch && !startedInEdit) {
-      const normalized = normalizeTimeZoneId(existingMatch.zone.timeZone);
-      setLabel(existingMatch.zone.label);
-      setLabelWasCleared(false);
-      setTimeZone(normalized);
-      setMembersInput(existingMatch.zone.members?.join(', ') ?? '');
-      setSearch(option.label);
-      setError('');
-      setIsSearchFocused(false);
-      onSelectExisting?.(existingMatch.index);
-      return;
-    }
-
-    setTimeZone(option.timeZoneId);
-    setLabel(getCityLabel(option));
-    setLabelWasCleared(false);
-    setSearch(option.label);
-    setError('');
-    setIsSearchFocused(false);
-  };
-
-  const handleClearSearch = () => {
-    setSearch('');
-    setTimeZone('');
-    setError('');
-    setIsSearchFocused(true);
-    searchInputRef.current?.focus();
-  };
-
   const headingText = isEdit ? t('heading.edit') : t('heading.add');
   const submitLabel = isEdit ? t('buttons.save') : t('buttons.add');
-  const labelLimit = 25;
-  const membersLimit = 50;
-  const labelLength = label.length;
-  const membersLength = membersInput.length;
-  const isLabelTooLong = labelLength > labelLimit;
-  const isMembersTooLong = membersLength > membersLimit;
 
   const inputStyle = {
     backgroundColor: theme.colors.card,
@@ -584,18 +351,13 @@ export function AddZoneOverlay({
                   : null,
               ]}
               value={search}
-              onChangeText={(val) => {
-                setSearch(val);
-                setTimeZone('');
-                setError('');
-                setIsSearchFocused(true);
-              }}
+              onChangeText={handleSearchChange}
               onFocus={() => {
-                setIsSearchFocused(true);
+                handleSearchFocus();
                 updateDropdownAnchor();
               }}
               onPressIn={() => {
-                setIsSearchFocused(true);
+                handleSearchFocus();
                 updateDropdownAnchor();
               }}
               placeholder={t('placeholders.search')}
@@ -630,16 +392,8 @@ export function AddZoneOverlay({
         <TextInput
           style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={label}
-          onChangeText={(text) => {
-            if (label.length > 0 && text.length === 0) {
-              setLabelWasCleared(true);
-            } else if (text.length > 0) {
-              setLabelWasCleared(false);
-            }
-            setLabel(text);
-            setError('');
-          }}
-          onFocus={() => setIsSearchFocused(false)}
+          onChangeText={handleLabelChange}
+          onFocus={handleFieldFocus}
           placeholder={t('placeholders.label')}
           placeholderTextColor={theme.colors.muted}
         />
@@ -672,11 +426,8 @@ export function AddZoneOverlay({
         <TextInput
           style={[inputStyle, { marginTop: theme.spacing.sPlus }]}
           value={membersInput}
-          onChangeText={(text) => {
-            setMembersInput(text);
-            setError('');
-          }}
-          onFocus={() => setIsSearchFocused(false)}
+          onChangeText={handleMembersChange}
+          onFocus={handleFieldFocus}
           placeholder={t('placeholders.members')}
           placeholderTextColor={theme.colors.muted}
           autoCapitalize="words"

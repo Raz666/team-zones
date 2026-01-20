@@ -4,6 +4,9 @@
     "addZone": "新しいタイムゾーンを追加",
     "lightTheme": "ライトテーマ",
     "darkTheme": "ダークテーマ",
+    "stayOn": "画面を常時オン",
+    "stayOnOn": "オン",
+    "stayOnOff": "オフ",
     "privacy": "プライバシーポリシー",
     "language": "言語"
   },

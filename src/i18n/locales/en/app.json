@@ -4,6 +4,9 @@
     "addZone": "Add new zone",
     "lightTheme": "Light theme",
     "darkTheme": "Dark theme",
+    "stayOn": "Keep screen on",
+    "stayOnOn": "On",
+    "stayOnOff": "Off",
     "privacy": "Privacy policy",
     "language": "Language"
   },

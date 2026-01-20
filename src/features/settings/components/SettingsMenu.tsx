@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Pressable } from 'react-native';
 import { useTheme } from '@shopify/restyle';
-import { FileText, Plus, Sun, Moon, Languages } from 'lucide-react-native';
+import { FileText, Plus, Sun, Moon, Languages, Zap, ZapOff } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import type { AppTheme } from '../../../theme/themes';
@@ -13,6 +13,9 @@ type SettingsMenuProps = {
   visible: boolean;
   isDark: boolean;
   onAddZone: () => void;
+  showStayOn: boolean;
+  stayOnEnabled: boolean;
+  onToggleStayOn: () => void;
   onToggleTheme: () => void;
   onOpenLanguage: () => void;
   onOpenPrivacy: () => void;
@@ -29,6 +32,9 @@ export function SettingsMenu({
   visible,
   isDark,
   onAddZone,
+  showStayOn,
+  stayOnEnabled,
+  onToggleStayOn,
   onToggleTheme,
   onOpenLanguage,
   onOpenPrivacy,
@@ -38,14 +44,31 @@ export function SettingsMenu({
   const rawLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0].toLowerCase();
   const selectedOption = getLanguageOption(rawLanguage);
 
-  const menuItems = useMemo<MenuItem[]>(
-    () => [
+  const menuItems = useMemo<MenuItem[]>(() => {
+    const items: MenuItem[] = [
       {
         label: t('menu.addZone'),
         subLabel: undefined,
         icon: <Plus size={18} color={theme.colors.text} />,
         onPress: onAddZone,
       },
+    ];
+
+    if (showStayOn) {
+      const stayOnColor = stayOnEnabled ? theme.colors.primary : theme.colors.text;
+      items.push({
+        label: t('menu.stayOn'),
+        subLabel: stayOnEnabled ? t('menu.stayOnOn') : t('menu.stayOnOff'),
+        icon: stayOnEnabled ? (
+          <Zap size={18} color={stayOnColor} />
+        ) : (
+          <ZapOff size={18} color={stayOnColor} />
+        ),
+        onPress: onToggleStayOn,
+      });
+    }
+
+    items.push(
       {
         label: isDark ? t('menu.lightTheme') : t('menu.darkTheme'),
         subLabel: undefined,
@@ -68,18 +91,23 @@ export function SettingsMenu({
         icon: <FileText size={18} color={theme.colors.text} />,
         onPress: onOpenPrivacy,
       },
-    ],
-    [
-      isDark,
-      onAddZone,
-      onOpenLanguage,
-      onOpenPrivacy,
-      onToggleTheme,
-      selectedOption,
-      t,
-      theme.colors.text,
-    ],
-  );
+    );
+
+    return items;
+  }, [
+    isDark,
+    onAddZone,
+    onOpenLanguage,
+    onOpenPrivacy,
+    onToggleStayOn,
+    onToggleTheme,
+    selectedOption,
+    showStayOn,
+    stayOnEnabled,
+    t,
+    theme.colors.primary,
+    theme.colors.text,
+  ]);
 
   if (!visible) {
     return null;

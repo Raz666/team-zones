@@ -4,6 +4,9 @@
     "addZone": "Dodaj nową strefę",
     "lightTheme": "Jasny motyw",
     "darkTheme": "Ciemny motyw",
+    "stayOn": "Nie wygaszaj ekranu",
+    "stayOnOn": "Włączone",
+    "stayOnOff": "Wyłączone",
     "privacy": "Polityka prywatności",
     "language": "Język"
   },

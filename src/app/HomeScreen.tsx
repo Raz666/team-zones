@@ -7,12 +7,13 @@ import {
   useState,
   type SetStateAction,
 } from 'react';
-import { Animated, BackHandler, Image, Pressable } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Animated, AppState, BackHandler, Image, Pressable } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { useTranslation } from 'react-i18next';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 import { AddZoneOverlay, ZoneDraft } from '../features/zones/components/AddZoneOverlay';
 import { UserTimeBar } from '../features/zones/components/UserTimeBar';
@@ -20,7 +21,7 @@ import { PrivacyPolicyModal } from '../features/settings/components/PrivacyPolic
 import { dayTagForZone, normalizeTimeZoneId } from '../features/zones/utils/timeZoneUtils';
 import { Box, Button, Text } from '../theme/components';
 import type { AppTheme } from '../theme/themes';
-import { Plus, Menu, Edit, Trash2 } from 'lucide-react-native';
+import { Plus, Menu, Edit, Trash2, Zap } from 'lucide-react-native';
 import { getIntlLocale } from '../i18n/intlLocale';
 import { isSupportedLanguage } from '../i18n/supportedLanguages';
 import { useFlag } from '../flags';
@@ -47,6 +48,7 @@ type HomeScreenProps = {
 const AnimatedBox = Animated.createAnimatedComponent(Box);
 const SPLASH_BACKGROUND = '#080D1D';
 const splashImage = require('../../assets/splash-icon.png');
+const STAY_ON_TAG = 'teamzones-stay-on';
 
 const timeFormatter = (locale: string, tz: string) =>
   new Intl.DateTimeFormat(locale, {
@@ -83,7 +85,6 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
 
 export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenProps) {
   const { t, i18n } = useTranslation('app');
-  const insets = useSafeAreaInsets();
   const isDark = mode === 'dark';
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -96,6 +97,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const [exitArmed, setExitArmed] = useState(false);
   const [showFlagsDebug, setShowFlagsDebug] = useState(false);
   const [uiState, dispatchUi] = useReducer(homeUiReducer, homeUiInitialState);
+  const [stayOnEnabled, setStayOnEnabled] = useState(false);
   const longPressFlag = useRef(false);
   const actionAnimRefs = useRef<Record<number, Animated.Value>>({});
   const actionVisibility = useRef<Record<number, boolean>>({});
@@ -112,12 +114,15 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const pendingDeleteIndex = uiState.deleteIndex;
   const draftIndex = uiState.editIndex;
   const debugMenuEnabled = useFlag('debugMenu');
+  const stayOnFeatureEnabled = useFlag('stayOn');
   const allowFlagsDebug = __DEV__ || debugMenuEnabled;
+
   const handleFlagsDebugTrigger = useCallback(() => {
     if (allowFlagsDebug) {
       setShowFlagsDebug(true);
     }
   }, [allowFlagsDebug]);
+
   const handleTitleTap = useMultiTap({
     taps: 7,
     windowMs: 3000,
@@ -126,10 +131,49 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
 
   useEffect(() => {
     if (paused) return;
+
     setCurrentTime(new Date());
     const id = setInterval(() => setCurrentTime(new Date()), 30_000);
+
     return () => clearInterval(id);
   }, [paused]);
+
+  useEffect(() => {
+    if (!stayOnFeatureEnabled && stayOnEnabled) {
+      setStayOnEnabled(false);
+    }
+  }, [stayOnEnabled, stayOnFeatureEnabled]);
+
+  useEffect(() => {
+    if (!stayOnFeatureEnabled) {
+      deactivateKeepAwake(STAY_ON_TAG);
+
+      return;
+    }
+
+    if (stayOnEnabled) {
+      activateKeepAwakeAsync(STAY_ON_TAG);
+
+      return () => {
+        deactivateKeepAwake(STAY_ON_TAG);
+      };
+    }
+
+    deactivateKeepAwake(STAY_ON_TAG);
+  }, [stayOnEnabled, stayOnFeatureEnabled]);
+
+  useEffect(() => {
+    if (!stayOnFeatureEnabled) return;
+
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
+        deactivateKeepAwake(STAY_ON_TAG);
+        setStayOnEnabled(false);
+      }
+    });
+
+    return () => subscription.remove();
+  }, [stayOnFeatureEnabled]);
 
   useEffect(() => {
     if (showForm || showPrivacyPolicy) {
@@ -137,6 +181,7 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
         clearTimeout(exitTimeoutRef.current);
         exitTimeoutRef.current = null;
       }
+
       exitArmedRef.current = false;
       setExitArmed(false);
     }
@@ -479,6 +524,20 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                 {t('title')}
               </Text>
               <Box flexDirection="row" alignItems="center">
+                {stayOnFeatureEnabled && stayOnEnabled ? (
+                  <Box
+                    padding="xs"
+                    borderRadius="full"
+                    backgroundColor="primarySoft"
+                    borderWidth={1}
+                    borderColor="primary"
+                    marginRight="s"
+                    alignItems="center"
+                    justifyContent="center"
+                  >
+                    <Zap size={14} color={theme.colors.primary} />
+                  </Box>
+                ) : null}
                 <Box style={{ position: 'relative' }}>
                   <Button
                     iconOnly
@@ -495,6 +554,9 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                     visible={showMenu}
                     isDark={isDark}
                     onAddZone={openAddZone}
+                    showStayOn={stayOnFeatureEnabled}
+                    stayOnEnabled={stayOnEnabled}
+                    onToggleStayOn={() => setStayOnEnabled((prev) => !prev)}
                     onToggleTheme={toggleTheme}
                     onOpenLanguage={() => dispatchUi({ type: 'OPEN_LANGUAGE' })}
                     onOpenPrivacy={() => dispatchUi({ type: 'OPEN_PRIVACY' })}

@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type SetStateAction } from 'react';
-import { Animated, BackHandler, Dimensions, Easing, Image, Pressable } from 'react-native';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type SetStateAction,
+} from 'react';
+import { Animated, BackHandler, Image, Pressable } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { useTranslation } from 'react-i18next';
@@ -13,18 +20,7 @@ import { PrivacyPolicyModal } from '../features/settings/components/PrivacyPolic
 import { dayTagForZone, normalizeTimeZoneId } from '../features/zones/utils/timeZoneUtils';
 import { Box, Button, Text } from '../theme/components';
 import type { AppTheme } from '../theme/themes';
-import {
-  FileText,
-  Plus,
-  Sun,
-  Moon,
-  Menu,
-  Edit,
-  Trash2,
-  X,
-  Languages,
-  Check,
-} from 'lucide-react-native';
+import { Plus, Menu, Edit, Trash2 } from 'lucide-react-native';
 import { getIntlLocale } from '../i18n/intlLocale';
 import { isSupportedLanguage } from '../i18n/supportedLanguages';
 import { useFlag } from '../flags';
@@ -33,6 +29,9 @@ import { useMultiTap } from '../flags/debug/useMultiTap';
 import { useZones } from '../features/zones/hooks/useZones';
 import type { Zone } from '../features/zones/storage/zonesRepository';
 import { homeUiInitialState, homeUiReducer } from '../features/zones/ui/homeUiReducer';
+import { LanguageModal } from '../features/settings/components/LanguageModal';
+import { SettingsMenu } from '../features/settings/components/SettingsMenu';
+import { DeleteZoneModal } from '../features/zones/components/DeleteZoneModal';
 
 type ZoneGroup = Zone;
 
@@ -83,29 +82,17 @@ function badgeColor(tag: DayBadgeTag): keyof AppTheme['colors'] {
 }
 
 export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenProps) {
-  const LANGUAGE_STORAGE_KEY = 'teamzones:language:v1';
   const { t, i18n } = useTranslation('app');
   const insets = useSafeAreaInsets();
-  const bottomInset = insets.bottom;
-  const topInset = insets.top;
   const isDark = mode === 'dark';
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const {
-    zones,
-    hydrated,
-    addZone,
-    updateZone,
-    deleteZone: removeZone,
-    reorderZones,
-  } = useZones();
+  const { zones, hydrated, addZone, updateZone, deleteZone: removeZone, reorderZones } = useZones();
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const [, setActiveIndex] = useState<number | null>(null);
+  const [, setHoverIndex] = useState<number | null>(null);
   const [actionIndex, setActionIndex] = useState<number | null>(null);
-  const [deleteIndex, setDeleteIndex] = useState<number | null>(null);
-  const [deleteModalRendered, setDeleteModalRendered] = useState(false);
   const [exitArmed, setExitArmed] = useState(false);
   const [showFlagsDebug, setShowFlagsDebug] = useState(false);
   const [uiState, dispatchUi] = useReducer(homeUiReducer, homeUiInitialState);
@@ -114,7 +101,6 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const actionVisibility = useRef<Record<number, boolean>>({});
   const exitArmedRef = useRef(false);
   const exitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const deleteModalAnimation = useRef(new Animated.Value(0)).current;
   const rawLanguage = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0].toLowerCase();
   const selectedLanguage = isSupportedLanguage(rawLanguage) ? rawLanguage : 'en';
   const intlLocale = getIntlLocale(selectedLanguage);
@@ -155,32 +141,6 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
       setExitArmed(false);
     }
   }, [showForm, showPrivacyPolicy]);
-
-  useEffect(() => {
-    if (pendingDeleteIndex !== null) {
-      setDeleteIndex(pendingDeleteIndex);
-      setDeleteModalRendered(true);
-      Animated.timing(deleteModalAnimation, {
-        toValue: 1,
-        duration: 200,
-        easing: Easing.inOut(Easing.circle),
-        useNativeDriver: true,
-      }).start();
-      return;
-    }
-
-    Animated.timing(deleteModalAnimation, {
-      toValue: 0,
-      duration: 260,
-      easing: Easing.inOut(Easing.circle),
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (finished) {
-        setDeleteModalRendered(false);
-        setDeleteIndex(null);
-      }
-    });
-  }, [deleteModalAnimation, pendingDeleteIndex]);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -229,87 +189,15 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const deviceTimeZone = useMemo(() => Intl.DateTimeFormat().resolvedOptions().timeZone, []);
 
   const usedTimeZones = useMemo(() => zones.map((z) => normalizeTimeZoneId(z.timeZone)), [zones]);
-  const deleteModalOffset = Dimensions.get('window').height;
-
-  const deleteBackdropOpacity = deleteModalAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1],
-  });
-
-  const deleteModalTranslateY = deleteModalAnimation.interpolate({
-    inputRange: [0, 1],
-    outputRange: [deleteModalOffset, 0],
-  });
 
   const openAddZone = () => {
     dispatchUi({ type: 'OPEN_ADD' });
     setActionIndex(null);
   };
 
-  const languageOptions = [
-    { value: 'en', label: 'English', flag: '🇬🇧' },
-    { value: 'pl', label: 'Polski', flag: '🇵🇱' },
-    { value: 'ja', label: '日本語', flag: '🇯🇵' },
-  ];
-  const selectedLanguageOption =
-    languageOptions.find((option) => option.value === selectedLanguage) ?? languageOptions[0];
-
-  const handleLanguageSelect = (language: string) => {
-    dispatchUi({ type: 'CLOSE_MODAL' });
-    if (language !== selectedLanguage) {
-      i18n.changeLanguage(language).catch((error) => {
-        console.warn('Failed to change language', error);
-      });
-    }
-    AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, language).catch((error) => {
-      console.warn('Failed to persist language selection', error);
-    });
-  };
-
   const toggleTheme = () => {
     setMode((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
-
-  const menuItems = [
-    {
-      label: t('menu.addZone'),
-      subLabel: undefined,
-      icon: <Plus size={18} color={theme.colors.text} />,
-      onPress: () => {
-        openAddZone();
-      },
-    },
-    {
-      label: isDark ? t('menu.lightTheme') : t('menu.darkTheme'),
-      subLabel: undefined,
-      icon: isDark ? (
-        <Sun size={18} color={theme.colors.text} />
-      ) : (
-        <Moon size={18} color={theme.colors.text} />
-      ),
-      onPress: () => {
-        toggleTheme();
-      },
-    },
-    {
-      label: t('menu.language'),
-      subLabel: selectedLanguageOption
-        ? `${selectedLanguageOption.flag} ${selectedLanguageOption.label}`
-        : undefined,
-      icon: <Languages size={18} color={theme.colors.text} />,
-      onPress: () => {
-        dispatchUi({ type: 'OPEN_LANGUAGE' });
-      },
-    },
-    {
-      label: t('menu.privacy'),
-      subLabel: undefined,
-      icon: <FileText size={18} color={theme.colors.text} />,
-      onPress: () => {
-        dispatchUi({ type: 'OPEN_PRIVACY' });
-      },
-    },
-  ];
 
   function submitZone(zone: ZoneDraft) {
     if (draftIndex === null) {
@@ -603,67 +491,14 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                     borderColor="primary"
                     icon={<Menu color={theme.colors.textInverse} size={18} />}
                   />
-                  {showMenu ? (
-                    <Box
-                      backgroundColor="card"
-                      borderRadius="l"
-                      borderWidth={1}
-                      borderColor="borderSubtle"
-                      paddingVertical="xs"
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        right: 0,
-                        marginTop: theme.spacing.s,
-                        minWidth: 200,
-                        zIndex: 3,
-                        shadowColor: '#000',
-                        shadowOpacity: 0.2,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 6 },
-                        elevation: 10,
-                      }}
-                    >
-                      {menuItems.map((item, index) => (
-                        <Pressable
-                          key={item.label}
-                          onPress={item.onPress}
-                          style={({ pressed }) => ({
-                            opacity: pressed ? 0.85 : 1,
-                          })}
-                        >
-                          <Box
-                            flexDirection="row"
-                            alignItems="center"
-                            paddingHorizontal="mPlus"
-                            paddingVertical="lPlus"
-                            borderBottomWidth={index < menuItems.length - 1 ? 1 : 0}
-                            borderBottomColor="borderSubtle"
-                            style={{ minWidth: 0 }}
-                          >
-                            {item.icon}
-                            <Box width={theme.spacing.sPlus} />
-                            <Box style={{ minWidth: 0, flexShrink: 1 }}>
-                              <Text variant="menuItem" style={{ flexShrink: 1 }}>
-                                {item.label}
-                              </Text>
-                              {item.subLabel ? (
-                                <Text
-                                  variant="caption"
-                                  color="muted"
-                                  marginTop="xs"
-                                  numberOfLines={1}
-                                  ellipsizeMode="tail"
-                                >
-                                  {item.subLabel}
-                                </Text>
-                              ) : null}
-                            </Box>
-                          </Box>
-                        </Pressable>
-                      ))}
-                    </Box>
-                  ) : null}
+                  <SettingsMenu
+                    visible={showMenu}
+                    isDark={isDark}
+                    onAddZone={openAddZone}
+                    onToggleTheme={toggleTheme}
+                    onOpenLanguage={() => dispatchUi({ type: 'OPEN_LANGUAGE' })}
+                    onOpenPrivacy={() => dispatchUi({ type: 'OPEN_PRIVACY' })}
+                  />
                 </Box>
               </Box>
             </Box>
@@ -752,190 +587,14 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
                 </Box>
               </Box>
             ) : null}
-            {deleteModalRendered ? (
-              <Pressable
-                onPress={() => dispatchUi({ type: 'CLEAR_DELETE' })}
-                style={{
-                  position: 'absolute',
-                  top: -topInset,
-                  left: 0,
-                  right: 0,
-                  bottom: -bottomInset,
-                  zIndex: 4,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  paddingTop: topInset,
-                  paddingBottom: bottomInset,
-                }}
-              >
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: theme.colors.overlay,
-                    opacity: deleteBackdropOpacity,
-                  }}
-                />
-                <Animated.View
-                  style={{
-                    width: '100%',
-                    transform: [{ translateY: deleteModalTranslateY }],
-                  }}
-                >
-                  <Pressable
-                    onPress={() => {}}
-                    style={({ pressed }) => ({ opacity: pressed ? 0.98 : 1, width: '100%' })}
-                  >
-                    <Box
-                      marginHorizontal="l"
-                      backgroundColor="card"
-                      borderRadius="l"
-                      borderWidth={1}
-                      borderColor="borderSubtle"
-                      padding="l"
-                      style={{
-                        shadowColor: '#000',
-                        shadowOpacity: 0.2,
-                        shadowRadius: 10,
-                        shadowOffset: { width: 0, height: 6 },
-                        elevation: 10,
-                      }}
-                    >
-                      <Text variant="heading2" color="text">
-                        {t('delete.title')}
-                      </Text>
-                      <Box marginTop="xsPlus">
-                        <Text variant="body" color="textSecondary" marginVertical="l">
-                          {t('delete.body', {
-                            label: zones[deleteIndex ?? -1]?.label ?? t('delete.fallback'),
-                          })}
-                        </Text>
-                      </Box>
-                      <Box marginTop="m" flexDirection="row" justifyContent="flex-end">
-                        <Box marginRight="m">
-                          <Button
-                            label={t('delete.cancel')}
-                            variant="ghost"
-                            size="sm"
-                            onPress={() => dispatchUi({ type: 'CLEAR_DELETE' })}
-                            icon={<X size={14} color={theme.colors.text} />}
-                          />
-                        </Box>
-                        <Button
-                          label={t('delete.confirm')}
-                          size="sm"
-                          onPress={() => {
-                            if (deleteIndex !== null) {
-                              deleteZone(deleteIndex);
-                              dispatchUi({ type: 'CLEAR_DELETE' });
-                            }
-                          }}
-                          backgroundColor="danger"
-                          borderColor="danger"
-                          icon={<Trash2 size={14} color={theme.colors.textInverse} />}
-                        />
-                      </Box>
-                    </Box>
-                  </Pressable>
-                </Animated.View>
-              </Pressable>
-            ) : null}
+            <DeleteZoneModal
+              pendingIndex={pendingDeleteIndex}
+              zones={zones}
+              onConfirm={deleteZone}
+              onCancel={() => dispatchUi({ type: 'CLEAR_DELETE' })}
+            />
             {showLanguageModal ? (
-              <Pressable
-                onPress={() => dispatchUi({ type: 'CLOSE_MODAL' })}
-                style={{
-                  position: 'absolute',
-                  top: -topInset,
-                  left: 0,
-                  right: 0,
-                  bottom: -bottomInset,
-                  zIndex: 4,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  paddingTop: topInset,
-                  paddingBottom: bottomInset,
-                }}
-              >
-                <Animated.View
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: theme.colors.overlay,
-                    opacity: 1,
-                  }}
-                />
-                <Pressable onPress={() => {}} style={{ minWidth: 250, alignSelf: 'center' }}>
-                  <Box
-                    marginHorizontal="l"
-                    backgroundColor="card"
-                    borderRadius="l"
-                    borderWidth={1}
-                    borderColor="borderSubtle"
-                    padding="l"
-                    style={{
-                      shadowColor: '#000',
-                      shadowOpacity: 0.2,
-                      shadowRadius: 10,
-                      shadowOffset: { width: 0, height: 6 },
-                      elevation: 10,
-                    }}
-                  >
-                    <Text variant="heading2" color="text">
-                      {t('menu.language')}
-                    </Text>
-                    <Box marginTop="m">
-                      {languageOptions.map((option) => {
-                        const isSelected = option.value === selectedLanguage;
-                        return (
-                          <Pressable
-                            key={option.value}
-                            onPress={() => handleLanguageSelect(option.value)}
-                            style={({ pressed }) => ({
-                              opacity: pressed ? 0.85 : 1,
-                            })}
-                          >
-                            <Box
-                              flexDirection="row"
-                              justifyContent="space-between"
-                              alignItems="center"
-                              paddingVertical="m"
-                              backgroundColor="card"
-                            >
-                              <Box flexDirection="row" alignItems="center">
-                                <Text variant="body" color="textSecondary" marginEnd="m">
-                                  {option.flag}
-                                </Text>
-                                <Text variant="body" color="textSecondary" numberOfLines={1}>
-                                  {option.label}
-                                </Text>
-                              </Box>
-                              {isSelected ? (
-                                <Box
-                                  width={24}
-                                  height={24}
-                                  borderRadius="full"
-                                  alignItems="center"
-                                  justifyContent="center"
-                                  backgroundColor="primary"
-                                  marginStart="xl"
-                                >
-                                  <Check size={14} color={theme.colors.textInverse} />
-                                </Box>
-                              ) : null}
-                            </Box>
-                          </Pressable>
-                        );
-                      })}
-                    </Box>
-                  </Box>
-                </Pressable>
-              </Pressable>
+              <LanguageModal onClose={() => dispatchUi({ type: 'CLOSE_MODAL' })} />
             ) : null}
             <FlagsDebugModal visible={showFlagsDebug} onClose={() => setShowFlagsDebug(false)} />
 

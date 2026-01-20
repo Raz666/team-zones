@@ -1,4 +1,5 @@
 import type { TimeZoneAlias } from './timeZoneAliases';
+import { getTimeZoneAbbreviationsForZone } from './timeZoneAbbreviations';
 import { TIMEZONE_COUNTRIES } from './timeZoneCountries';
 import { normalizeTimeZoneId } from './timeZoneUtils';
 import {
@@ -250,6 +251,7 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
   const cityDisplay = cityLabel || cityRaw;
   const label = buildOptionLabel(cityDisplay, district, country, regionLabel, regionKey);
   const countryTerms = getCountrySearchTerms(countryRaw);
+  const abbreviationTerms = getTimeZoneAbbreviationsForZone(zoneId);
   const searchText = buildSearchText(label, zoneId, [
     cityLabel,
     cityRaw,
@@ -258,6 +260,7 @@ export function getTimeZoneOption(timeZone: string, lang: string): TimeZoneOptio
     regionHiragana,
     countryHiragana,
     ...countryTerms,
+    ...abbreviationTerms,
   ]);
 
   const option = {
@@ -336,6 +339,7 @@ export function getTimeZoneOptions(
     const cityDisplay = cityLabel || cityRaw;
     const label = buildOptionLabel(cityDisplay, district, country, regionLabel, regionKey);
     const countryTerms = getCountrySearchTerms(countryRaw);
+    const abbreviationTerms = getTimeZoneAbbreviationsForZone(zoneId);
     const searchText = buildSearchText(label, zoneId, [
       cityLabel,
       cityRaw,
@@ -345,6 +349,7 @@ export function getTimeZoneOptions(
       countryHiragana,
       ...(alias.searchTerms ?? []),
       ...countryTerms,
+      ...abbreviationTerms,
       legacyCity,
     ]);
     const id = useZoneIdAsId ? zoneId : buildAliasId(zoneId, cityRaw, district, countryRaw);

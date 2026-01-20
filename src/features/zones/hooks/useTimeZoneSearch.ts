@@ -6,6 +6,10 @@ import type { TimeZoneOption } from '../utils/timeZoneDisplay';
 import { TIMEZONE_ALIASES } from '../utils/timeZoneAliases';
 import { IANA_TIMEZONES } from '../utils/timezones';
 import { normalizeTimeZoneId } from '../utils/timeZoneUtils';
+import {
+  getTimeZoneAbbreviationLabelsForZone,
+  getTimeZoneAbbreviationMatch,
+} from '../utils/timeZoneAbbreviations';
 import type { Zone } from '../storage/zonesRepository';
 
 const normalizeLabelValue = (value: string) => value.trim().toLowerCase();
@@ -54,6 +58,7 @@ export function useTimeZoneSearch({ existingZones, usedTimeZones, language }: Us
   );
 
   const now = useMemo(() => new Date(), [isSearchFocused, search]);
+  const abbreviationMatch = useMemo(() => getTimeZoneAbbreviationMatch(search), [search]);
 
   const existingZonesById = useMemo(() => {
     const map = new Map<string, { zone: Zone; index: number }[]>();
@@ -124,7 +129,18 @@ export function useTimeZoneSearch({ existingZones, usedTimeZones, language }: Us
       if (index === 0) return true;
       return cleaned[index - 1].toLowerCase() !== piece.toLowerCase();
     });
-    return deduped.join(', ');
+    const baseLine = deduped.join(', ');
+    if (!abbreviationMatch) return baseLine;
+    const abbreviations = getTimeZoneAbbreviationLabelsForZone(
+      option.timeZoneId,
+      abbreviationMatch.abbreviation,
+    );
+    if (!abbreviations.length) return baseLine;
+    const abbreviationLine = abbreviations
+      .map((entry) => `(${entry.name})`)
+      .join(' / ');
+    if (!baseLine) return abbreviationLine;
+    return `${baseLine} ${abbreviationLine}`;
   };
 
   const availableOptions = useMemo(

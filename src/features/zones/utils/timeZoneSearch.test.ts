@@ -38,4 +38,21 @@ describe('filterTimeZoneOptions', () => {
     expect(results).toHaveLength(1);
     expect(results[0]?.timeZoneId).toBe('Etc/UTC');
   });
+
+  test('prioritizes abbreviation matches with primary time zone', () => {
+    const options = [
+      makeOption('shanghai', 'Asia/Shanghai', 'Shanghai', 'cst'),
+      makeOption('chicago', 'America/Chicago', 'Chicago', 'cst'),
+      makeOption('madrid', 'Europe/Madrid', 'Madrid', 'cst'),
+    ];
+    const now = new Date('2024-01-01T00:00:00Z');
+
+    const results = filterTimeZoneOptions(options, 'CST', now);
+
+    expect(results.map((option) => option.timeZoneId)).toEqual([
+      'America/Chicago',
+      'Asia/Shanghai',
+      'Europe/Madrid',
+    ]);
+  });
 });

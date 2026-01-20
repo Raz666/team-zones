@@ -94,7 +94,7 @@ export const baseTheme = createTheme({
     card: '#1E253B',
     cardHover: '#0A1430',
     primary: '#107FA8',
-    primarySoft: '#5C0076',
+    primarySoft: '#e3f1f621',
     accent: '#5C0076',
     text: '#EFFBFF',
     textSecondary: '#C4D4DA',

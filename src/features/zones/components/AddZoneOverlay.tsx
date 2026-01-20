@@ -574,7 +574,7 @@ export function AddZoneOverlay({
                             paddingHorizontal="s"
                             paddingVertical="xs"
                             borderRadius="full"
-                            backgroundColor="primarySoft"
+                            backgroundColor="accent"
                           >
                             <Text variant="label" color="textSecondary">
                               {t('badge.added')}

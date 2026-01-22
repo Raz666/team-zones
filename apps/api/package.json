@@ -1,0 +1,10 @@
+{
+  "name": "@team-zones/api",
+  "version": "0.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "echo \"API dev server not implemented yet.\"",
+    "build": "echo \"API build not implemented yet.\""
+  }
+}

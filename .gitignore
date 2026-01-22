@@ -37,10 +37,13 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
-/android
+apps/mobile/ios
+apps/mobile/android
 
 # other
 /aabs
 /store_assets
 /raw_assets
+apps/mobile/aabs
+apps/mobile/store_assets
+apps/mobile/raw_assets

@@ -31,6 +31,14 @@ npm run dev
 - `DATABASE_URL` is required in production.
 - Migrations are committed under `prisma/migrations`.
 
+### Auth
+
+- `AUTH_JWT_SECRET` and `AUTH_JWT_ISSUER` are required.
+- Access tokens default to 15 minutes; refresh tokens default to 90 days.
+- `/auth/request-link` uses `AUTH_RATE_LIMIT_MAX_REQUEST_LINK` and `AUTH_RATE_LIMIT_WINDOW_MS`.
+- In development, the magic-link token is logged to the console for copy/paste.
+- In production, the email sender is a TODO stub (no real delivery yet).
+
 ## Migrations
 
 ```bash
@@ -44,6 +52,10 @@ npm run --workspace apps/api db:studio
 
 - `GET /healthz`
 - `GET /readyz` (returns 503 when the database is unavailable)
+- `POST /auth/request-link`
+- `POST /auth/exchange-link`
+- `POST /auth/refresh`
+- `POST /auth/logout`
 
 ## Notes
 

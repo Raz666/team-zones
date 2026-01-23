@@ -2,6 +2,7 @@
 import { env } from "./config/env";
 import { registerErrorHandlers } from "./plugins/errors";
 import { registerSecurity } from "./plugins/security";
+import { prisma } from "./db/prisma";
 import { registerHealthRoutes } from "./routes/health";
 
 export const buildServer = (): FastifyInstance => {
@@ -19,6 +20,9 @@ export const buildServer = (): FastifyInstance => {
   registerErrorHandlers(app);
   registerSecurity(app);
   registerHealthRoutes(app);
+  app.addHook("onClose", async () => {
+    await prisma.$disconnect();
+  });
 
   return app;
 };

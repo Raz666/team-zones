@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  devices           Device[]
+  settingsSnapshots SettingsSnapshot[]
+  refreshTokens     RefreshToken[]
+  purchaseTokens    PurchaseToken[]
+  entitlements      Entitlement[]
+
+}
+
+model Device {
+  id         String   @id @default(uuid())
+  userId     String
+  deviceName String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+  deletedAt  DateTime?
+
+  user              User              @relation(fields: [userId], references: [id])
+  settingsSnapshots SettingsSnapshot[]
+  refreshTokens     RefreshToken[]
+
+  @@index([userId])
+}
+
+model SettingsSnapshot {
+  id           String   @id @default(uuid())
+  userId       String
+  deviceId     String?
+  version      Int
+  settingsJson String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+
+  user   User    @relation(fields: [userId], references: [id])
+  device Device? @relation(fields: [deviceId], references: [id])
+
+  @@unique([userId, version])
+  @@index([userId])
+  @@index([deviceId])
+}
+
+model LoginToken {
+  id        String   @id @default(uuid())
+  email     String
+  tokenHash String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([email])
+  @@index([tokenHash])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id                String   @id @default(uuid())
+  userId            String
+  deviceId          String?
+  tokenHash         String
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+  lastUsedAt        DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?
+  deletedAt         DateTime?
+
+  user   User    @relation(fields: [userId], references: [id])
+  device Device? @relation(fields: [deviceId], references: [id])
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([replacedByTokenId])
+}
+
+model PurchaseToken {
+  id            String   @id @default(uuid())
+  userId        String
+  productId     String
+  purchaseToken String   @unique
+  orderId       String?
+  purchaseTime  DateTime?
+  rawResponse   String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([productId])
+}
+
+model Entitlement {
+  id        String            @id @default(uuid())
+  userId    String
+  key       String
+  status    String
+  source    String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  revokedAt DateTime?
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([key])
+  @@index([status])
+}

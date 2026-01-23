@@ -26,6 +26,7 @@ const booleanSchema = z.preprocess((value) => {
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
+  DATABASE_URL: z.string().min(1).optional(),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   API_HOST: z.string().min(1).default("0.0.0.0"),
   CORS_ALLOW_ORIGINS: z.string().optional(),
@@ -46,6 +47,15 @@ if (!parsed.success) {
   );
 }
 
+const nodeEnv = parsed.data.NODE_ENV ?? "development";
+const databaseUrl = parsed.data.DATABASE_URL ?? "file:./prisma/dev.db";
+
+if (nodeEnv === "production" && !parsed.data.DATABASE_URL) {
+  throw new Error(
+    "Invalid environment configuration. DATABASE_URL is required in production."
+  );
+}
+
 const corsAllowOrigins = parsed.data.CORS_ALLOW_ORIGINS
   ? parsed.data.CORS_ALLOW_ORIGINS.split(",")
       .map((origin) => origin.trim())
@@ -53,7 +63,8 @@ const corsAllowOrigins = parsed.data.CORS_ALLOW_ORIGINS
   : undefined;
 
 export const env = {
-  nodeEnv: parsed.data.NODE_ENV ?? "development",
+  nodeEnv,
+  databaseUrl,
   apiPort: parsed.data.API_PORT,
   apiHost: parsed.data.API_HOST,
   corsAllowOrigins,

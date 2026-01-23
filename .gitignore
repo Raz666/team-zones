@@ -36,6 +36,10 @@ yarn-error.*
 !.env.example
 .env*.local
 
+# sqlite dev dbs
+apps/api/prisma/*.db
+apps/api/*.db
+
 # typescript
 *.tsbuildinfo
 

@@ -6,6 +6,7 @@ import { registerSecurity } from "./plugins/security";
 import { prisma } from "./db/prisma";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerHealthRoutes } from "./routes/health";
+import { registerSettingsRoutes } from "./routes/settings";
 
 export const buildServer = (): FastifyInstance => {
   const app = fastify({
@@ -23,6 +24,7 @@ export const buildServer = (): FastifyInstance => {
   registerSecurity(app);
   registerAuth(app);
   registerAuthRoutes(app);
+  registerSettingsRoutes(app);
   registerHealthRoutes(app);
   app.addHook("onClose", async () => {
     await prisma.$disconnect();

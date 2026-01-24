@@ -56,6 +56,16 @@ npm run --workspace apps/api db:studio
 - `POST /auth/exchange-link`
 - `POST /auth/refresh`
 - `POST /auth/logout`
+- `GET /settings` (requires access token)
+- `PUT /settings` (requires access token)
+
+## Settings sync contract
+
+- `GET /settings` returns the latest non-deleted snapshot or `204 No Content`.
+- `PUT /settings` accepts `{ version: number, settings: object }`.
+- Versions must be strictly increasing; conflicts return `409`.
+- Payload size limit is 64KB (serialized JSON).
+- Retention keeps the latest 20 snapshots per user; older entries are soft-deleted.
 
 ## Notes
 

@@ -5,6 +5,11 @@ declare module "@fastify/jwt" {
     payload: {
       sub: string;
       deviceId?: string | null;
+      entitlements?: string[];
+      nonce?: string;
+      iat?: number;
+      exp?: number;
+      [key: string]: unknown;
     };
     user: {
       sub: string;

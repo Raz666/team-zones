@@ -18,6 +18,8 @@ npm run db:migrate
 npm run dev
 ```
 
+Node.js 20+ is required (Fastify v5).
+
 ## Environment loading
 
 - `.env` is loaded **only** when `NODE_ENV` is not `production`.
@@ -38,6 +40,11 @@ npm run dev
 - `/auth/request-link` uses `AUTH_RATE_LIMIT_MAX_REQUEST_LINK` and `AUTH_RATE_LIMIT_WINDOW_MS`.
 - In development, the magic-link token is logged to the console for copy/paste.
 - In production, the email sender is a TODO stub (no real delivery yet).
+
+### Entitlement certificates
+
+- `ENTITLEMENT_CERT_SECRET` must be different from `AUTH_JWT_SECRET`.
+- `OFFLINE_CERT_TTL_DAYS` defaults to 30.
 
 ### Google Play verification
 
@@ -70,6 +77,8 @@ npm run --workspace apps/api db:studio
   - Body: `{ productId, purchaseToken }`
   - Returns: `{ entitlements: ["premium"], entitlementStatus: "active" }`
   - Returns `409` if the purchase token is already claimed by another user.
+- `GET /me` (requires access token)
+- `POST /entitlements/certificate` (requires access token)
 
 ## Settings sync contract
 
@@ -78,6 +87,11 @@ npm run --workspace apps/api db:studio
 - Versions must be strictly increasing; conflicts return `409`.
 - Payload size limit is 64KB (serialized JSON).
 - Retention keeps the latest 20 snapshots per user; older entries are soft-deleted.
+
+## Entitlement certificate contract
+
+- `GET /me` returns `{ user: { id }, entitlements: string[] }`.
+- `POST /entitlements/certificate` returns `{ entitlements, certificate, offlineValidUntil }`.
 
 ## Notes
 

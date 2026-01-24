@@ -8,6 +8,8 @@ import { registerAuthRoutes } from "./routes/auth";
 import { registerHealthRoutes } from "./routes/health";
 import { registerSettingsRoutes } from "./routes/settings";
 import { registerIapRoutes } from "./routes/iap";
+import { registerMeRoutes } from "./routes/me";
+import { registerEntitlementRoutes } from "./routes/entitlements";
 
 export const buildServer = (): FastifyInstance => {
   const app = fastify({
@@ -27,6 +29,8 @@ export const buildServer = (): FastifyInstance => {
   registerAuthRoutes(app);
   registerSettingsRoutes(app);
   registerIapRoutes(app);
+  registerMeRoutes(app);
+  registerEntitlementRoutes(app);
   registerHealthRoutes(app);
   app.addHook("onClose", async () => {
     await prisma.$disconnect();

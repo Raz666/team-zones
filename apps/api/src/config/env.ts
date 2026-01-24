@@ -34,6 +34,8 @@ const envSchema = z.object({
   LOGIN_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(10),
   AUTH_RATE_LIMIT_MAX_REQUEST_LINK: z.coerce.number().int().positive().default(5),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  ENTITLEMENT_CERT_SECRET: z.string().min(1),
+  OFFLINE_CERT_TTL_DAYS: z.coerce.number().int().positive().default(30),
   GOOGLE_PLAY_PACKAGE_NAME: z.string().min(1),
   GOOGLE_PLAY_PRODUCT_IDS_ALLOWLIST: z.string().min(1),
   GOOGLE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
@@ -73,6 +75,12 @@ if (!parsed.data.GOOGLE_SERVICE_ACCOUNT_JSON && !parsed.data.GOOGLE_SERVICE_ACCO
   );
 }
 
+if (parsed.data.AUTH_JWT_SECRET === parsed.data.ENTITLEMENT_CERT_SECRET) {
+  throw new Error(
+    "Invalid environment configuration. ENTITLEMENT_CERT_SECRET must differ from AUTH_JWT_SECRET."
+  );
+}
+
 const googlePlayProductIdsAllowlist = parsed.data.GOOGLE_PLAY_PRODUCT_IDS_ALLOWLIST
   .split(",")
   .map((value) => value.trim())
@@ -100,6 +108,8 @@ export const env = {
   loginTokenTtlMinutes: parsed.data.LOGIN_TOKEN_TTL_MINUTES,
   authRateLimitMaxRequestLink: parsed.data.AUTH_RATE_LIMIT_MAX_REQUEST_LINK,
   authRateLimitWindowMs: parsed.data.AUTH_RATE_LIMIT_WINDOW_MS,
+  entitlementCertSecret: parsed.data.ENTITLEMENT_CERT_SECRET,
+  offlineCertTtlDays: parsed.data.OFFLINE_CERT_TTL_DAYS,
   googlePlayPackageName: parsed.data.GOOGLE_PLAY_PACKAGE_NAME,
   googlePlayProductIdsAllowlist,
   googleServiceAccountJson: parsed.data.GOOGLE_SERVICE_ACCOUNT_JSON ?? null,

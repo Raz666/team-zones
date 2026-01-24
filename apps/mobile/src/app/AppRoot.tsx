@@ -8,10 +8,12 @@ import { FlagsProvider } from '../flags';
 import type { AppTheme } from '../theme/themes';
 import { darkTheme, lightTheme } from '../theme/themes';
 import { HomeScreen } from './HomeScreen';
+import { useMagicLinkListener } from '../shared/auth/useMagicLinkListener';
 
 const THEME_STORAGE_KEY = 'teamzones:theme:v1';
 
 export default function AppRoot() {
+  useMagicLinkListener();
   const [mode, setMode] = useState<'light' | 'dark'>('dark');
   const [themeHydrated, setThemeHydrated] = useState(false);
   const theme: AppTheme = useMemo(() => (mode === 'dark' ? darkTheme : lightTheme), [mode]);

@@ -9,6 +9,7 @@ type UseZonesState = {
   updateZone: (index: number, zone: Zone) => void;
   deleteZone: (index: number) => void;
   reorderZones: (from: number, to: number) => void;
+  replaceZones: (zones: Zone[]) => void;
 };
 
 export function useZones(): UseZonesState {
@@ -52,6 +53,10 @@ export function useZones(): UseZonesState {
     });
   }, []);
 
+  const replaceZones = useCallback((next: Zone[]) => {
+    setZones(next);
+  }, []);
+
   return {
     zones,
     hydrated,
@@ -59,5 +64,6 @@ export function useZones(): UseZonesState {
     updateZone,
     deleteZone,
     reorderZones,
+    replaceZones,
   };
 }

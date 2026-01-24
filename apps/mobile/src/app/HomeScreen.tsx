@@ -33,6 +33,8 @@ import { homeUiInitialState, homeUiReducer } from '../features/zones/ui/homeUiRe
 import { LanguageModal } from '../features/settings/components/LanguageModal';
 import { SettingsMenu } from '../features/settings/components/SettingsMenu';
 import { DeleteZoneModal } from '../features/zones/components/DeleteZoneModal';
+import { useSettingsSync } from '../features/settings/sync/useSettingsSync';
+import { useAuthSession } from '../shared/auth/useAuthSession';
 
 type ZoneGroup = Zone;
 
@@ -88,7 +90,16 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const isDark = mode === 'dark';
 
   const [currentTime, setCurrentTime] = useState(() => new Date());
-  const { zones, hydrated, addZone, updateZone, deleteZone: removeZone, reorderZones } = useZones();
+  const {
+    zones,
+    hydrated,
+    addZone,
+    updateZone,
+    deleteZone: removeZone,
+    reorderZones,
+    replaceZones,
+  } = useZones();
+  const { isAuthenticated } = useAuthSession();
   const [paused, setPaused] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [, setActiveIndex] = useState<number | null>(null);
@@ -116,6 +127,13 @@ export function HomeScreen({ theme, mode, themeHydrated, setMode }: HomeScreenPr
   const debugMenuEnabled = useFlag('debugMenu');
   const stayOnFeatureEnabled = useFlag('stayOn');
   const allowFlagsDebug = __DEV__ || debugMenuEnabled;
+
+  useSettingsSync({
+    zones,
+    replaceZones,
+    zonesHydrated: hydrated,
+    isAuthenticated,
+  });
 
   const handleFlagsDebugTrigger = useCallback(() => {
     if (allowFlagsDebug) {

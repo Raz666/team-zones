@@ -1,4 +1,4 @@
-﻿import { FastifyInstance } from "fastify";
+import { FastifyInstance } from "fastify";
 
 const errorCodeForStatus = (statusCode: number): string => {
   if (statusCode >= 500) {
@@ -33,14 +33,29 @@ export const registerErrorHandlers = (app: FastifyInstance): void => {
   });
 
   app.setErrorHandler((error, _request, reply) => {
-    const statusCode = error.statusCode ?? 500;
+    const statusCode = (() => {
+      if (error && typeof error === "object" && "statusCode" in error) {
+        const value = (error as { statusCode?: unknown }).statusCode;
+        if (typeof value === "number") {
+          return value;
+        }
+      }
+      return 500;
+    })();
     const code = errorCodeForStatus(statusCode);
-    const message = statusCode >= 500 ? "Internal Server Error" : error.message;
+    const message =
+      statusCode >= 500
+        ? "Internal Server Error"
+        : error instanceof Error && error.message
+          ? error.message
+          : "Request failed.";
+
+    const logError = error instanceof Error ? error : new Error("Unknown error");
 
     if (statusCode >= 500) {
-      app.log.error({ err: error }, "Unhandled error");
+      app.log.error({ err: logError }, "Unhandled error");
     } else {
-      app.log.warn({ err: error }, "Request error");
+      app.log.warn({ err: logError }, "Request error");
     }
 
     reply.status(statusCode).send({

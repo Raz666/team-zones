@@ -1,5 +1,5 @@
-﻿import jwt from "@fastify/jwt";
-import { FastifyInstance } from "fastify";
+import jwt, { FastifyJWTOptions } from "@fastify/jwt";
+import { FastifyInstance, FastifyPluginAsync } from "fastify";
 import { env } from "../config/env";
 import { sendError } from "../lib/httpErrors";
 
@@ -9,14 +9,14 @@ export type AuthTokenPayload = {
 };
 
 export const registerAuth = (app: FastifyInstance): void => {
-  app.register(jwt, {
+  app.register(jwt as unknown as FastifyPluginAsync<FastifyJWTOptions>, {
     secret: env.authJwtSecret,
     sign: {
-      issuer: env.authJwtIssuer,
+      iss: env.authJwtIssuer,
       expiresIn: `${env.authAccessTtlMinutes}m`,
     },
     verify: {
-      issuer: env.authJwtIssuer,
+      allowedIss: env.authJwtIssuer,
     },
   });
 

@@ -45,11 +45,10 @@ const getAndroidPublisherClient = async () => {
     credentials,
     scopes: [ANDROID_PUBLISHER_SCOPE],
   });
-  const authClient = await auth.getClient();
 
   cachedClient = google.androidpublisher({
     version: "v3",
-    auth: authClient,
+    auth,
   });
 
   return cachedClient;

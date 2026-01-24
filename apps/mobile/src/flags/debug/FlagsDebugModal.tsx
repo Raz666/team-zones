@@ -1,7 +1,15 @@
-import { Modal, Pressable } from 'react-native';
+﻿import { Modal, Pressable, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '@shopify/restyle';
+import { useState } from 'react';
 import { getDiagnostics } from '..';
 import { Box, Button, Text } from '../../theme/components';
+import type { AppTheme } from '../../theme/themes';
+import { getApiBaseUrl } from '../../shared/api/config';
+import { requestMagicLink, exchangeMagicLink, logout } from '../../shared/auth/api';
+import { apiRequest } from '../../shared/api/client';
+import { useAuthSession } from '../../shared/auth/useAuthSession';
+import { useEntitlements } from '../../shared/entitlements/useEntitlements';
 
 type FlagsDebugModalProps = {
   visible: boolean;
@@ -11,6 +19,13 @@ type FlagsDebugModalProps = {
 export function FlagsDebugModal({ visible, onClose }: FlagsDebugModalProps) {
   const insets = useSafeAreaInsets();
   const diagnostics = visible ? getDiagnostics() : null;
+  const theme = useTheme<AppTheme>();
+  const { isAuthenticated } = useAuthSession();
+  const entitlements = useEntitlements();
+  const [email, setEmail] = useState('');
+  const [token, setToken] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const deviceId = diagnostics?.deviceId ?? 'Unavailable';
   const fetchedAt = diagnostics?.remote.fetchedAt ?? null;
@@ -21,6 +36,68 @@ export function FlagsDebugModal({ visible, onClose }: FlagsDebugModalProps) {
         : 'remote'
       : 'default'
     : 'unknown';
+
+  const inputStyle = {
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    borderRadius: theme.borderRadii.m,
+    paddingHorizontal: theme.spacing.m,
+    paddingVertical: theme.spacing.s,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+  } as const;
+
+  const handleRequestLink = async () => {
+    setBusy(true);
+    setStatus(null);
+    const ok = await requestMagicLink(email);
+    setStatus(ok ? 'Magic link requested (check server logs in dev).' : 'Request failed.');
+    setBusy(false);
+  };
+
+  const handleExchange = async () => {
+    setBusy(true);
+    setStatus(null);
+    const ok = await exchangeMagicLink(token);
+    setStatus(ok ? 'Signed in.' : 'Exchange failed.');
+    setBusy(false);
+  };
+
+  const handleLogout = async () => {
+    setBusy(true);
+    await logout();
+    setStatus('Signed out.');
+    setBusy(false);
+  };
+
+  const handleRefreshCertificate = async () => {
+    setBusy(true);
+    await entitlements.refreshCertificate();
+    setStatus('Certificate refreshed.');
+    setBusy(false);
+  };
+
+  const handlePing = async () => {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const response = await apiRequest<{ ok: boolean; time?: string }>({
+        path: '/healthz',
+        method: 'GET',
+        retryOnUnauthorized: false,
+      });
+      if (response.ok) {
+        setStatus(`API reachable${response.data?.time ? ` (${response.data.time})` : ''}.`);
+      } else {
+        setStatus(`API ping failed (${response.status}).`);
+      }
+    } catch (error) {
+      console.warn('Failed to ping API', error);
+      setStatus('API ping failed.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -51,7 +128,7 @@ export function FlagsDebugModal({ visible, onClose }: FlagsDebugModalProps) {
           }}
           backgroundColor="overlay"
         />
-        <Pressable onPress={() => {}} style={{ minWidth: 260, alignSelf: 'center' }}>
+        <Pressable onPress={() => {}} style={{ minWidth: 280, alignSelf: 'center' }}>
           <Box
             marginHorizontal="l"
             backgroundColor="card"
@@ -70,6 +147,16 @@ export function FlagsDebugModal({ visible, onClose }: FlagsDebugModalProps) {
             <Text variant="heading2" color="text">
               Flags Debug
             </Text>
+            <Box marginTop="m">
+              <Text variant="caption" color="muted">
+                API Base URL
+              </Text>
+              <Box marginTop="xs">
+                <Text variant="body" color="textSecondary" selectable>
+                  {getApiBaseUrl()}
+                </Text>
+              </Box>
+            </Box>
             <Box marginTop="m">
               <Text variant="caption" color="muted">
                 Device ID
@@ -100,6 +187,95 @@ export function FlagsDebugModal({ visible, onClose }: FlagsDebugModalProps) {
                 </Text>
               </Box>
             </Box>
+
+            <Box marginTop="l">
+              <Text variant="subtitle">Auth Debug</Text>
+              <Box marginTop="s">
+                <Text variant="caption" color="muted">
+                  Status
+                </Text>
+                <Box marginTop="xs">
+                  <Text variant="body" color="textSecondary">
+                    {isAuthenticated ? 'Signed in' : 'Signed out'}
+                  </Text>
+                </Box>
+              </Box>
+              <Box marginTop="s">
+                <Text variant="caption" color="muted">
+                  Email
+                </Text>
+                <Box marginTop="xs">
+                  <TextInput
+                    style={inputStyle}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor={theme.colors.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    keyboardType="email-address"
+                  />
+                </Box>
+              </Box>
+              <Box marginTop="s">
+                <Text variant="caption" color="muted">
+                  Magic Token
+                </Text>
+                <Box marginTop="xs">
+                  <TextInput
+                    style={inputStyle}
+                    value={token}
+                    onChangeText={setToken}
+                    placeholder="paste token"
+                    placeholderTextColor={theme.colors.muted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                </Box>
+              </Box>
+              <Box marginTop="s" flexDirection="row" justifyContent="space-between">
+                <Button label="Request" size="sm" onPress={handleRequestLink} disabled={busy} />
+                <Box width={theme.spacing.s} />
+                <Button label="Exchange" size="sm" onPress={handleExchange} disabled={busy} />
+              </Box>
+              <Box marginTop="s" flexDirection="row" justifyContent="space-between">
+                <Button label="Ping API" size="sm" onPress={handlePing} disabled={busy} />
+                <Box width={theme.spacing.s} />
+                <Button label="Logout" size="sm" onPress={handleLogout} disabled={busy} />
+              </Box>
+              <Box marginTop="s" flexDirection="row" justifyContent="space-between">
+                <Button
+                  label="Refresh Cert"
+                  size="sm"
+                  onPress={handleRefreshCertificate}
+                  disabled={busy || !isAuthenticated}
+                />
+              </Box>
+              {status ? (
+                <Box marginTop="s">
+                  <Text variant="caption" color="muted">
+                    {status}
+                  </Text>
+                </Box>
+              ) : null}
+            </Box>
+
+            <Box marginTop="m">
+              <Text variant="caption" color="muted">
+                Entitlements
+              </Text>
+              <Box marginTop="xs">
+                <Text variant="body" color="textSecondary">
+                  {entitlements.entitlements.length > 0
+                    ? entitlements.entitlements.join(', ')
+                    : 'none'}
+                </Text>
+                <Text variant="caption" color="muted" marginTop="xs">
+                  Offline valid until: {entitlements.offlineValidUntil ?? 'n/a'}
+                </Text>
+              </Box>
+            </Box>
+
             <Box marginTop="l" flexDirection="row" justifyContent="flex-end">
               <Button label="Close" size="sm" onPress={onClose} />
             </Box>

@@ -39,6 +39,14 @@ npm run dev
 - In development, the magic-link token is logged to the console for copy/paste.
 - In production, the email sender is a TODO stub (no real delivery yet).
 
+### Google Play verification
+
+- `GOOGLE_PLAY_PACKAGE_NAME` and `GOOGLE_PLAY_PRODUCT_IDS_ALLOWLIST` are required.
+- Provide Google service account credentials via `GOOGLE_SERVICE_ACCOUNT_JSON` or `GOOGLE_SERVICE_ACCOUNT_JSON_PATH`.
+- If using `GOOGLE_SERVICE_ACCOUNT_JSON`, store the full JSON string (escaped) in your `.env`.
+- `GOOGLE_SERVICE_ACCOUNT_JSON_PATH` is usually easier for local dev.
+- Purchase tokens are stored for audit; raw responses are never returned to clients.
+
 ## Migrations
 
 ```bash
@@ -58,6 +66,10 @@ npm run --workspace apps/api db:studio
 - `POST /auth/logout`
 - `GET /settings` (requires access token)
 - `PUT /settings` (requires access token)
+- `POST /iap/google/verify` (requires access token)
+  - Body: `{ productId, purchaseToken }`
+  - Returns: `{ entitlements: ["premium"], entitlementStatus: "active" }`
+  - Returns `409` if the purchase token is already claimed by another user.
 
 ## Settings sync contract
 

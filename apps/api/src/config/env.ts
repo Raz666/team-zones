@@ -34,6 +34,10 @@ const envSchema = z.object({
   LOGIN_TOKEN_TTL_MINUTES: z.coerce.number().int().positive().default(10),
   AUTH_RATE_LIMIT_MAX_REQUEST_LINK: z.coerce.number().int().positive().default(5),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  GOOGLE_PLAY_PACKAGE_NAME: z.string().min(1),
+  GOOGLE_PLAY_PRODUCT_IDS_ALLOWLIST: z.string().min(1),
+  GOOGLE_SERVICE_ACCOUNT_JSON: z.string().min(1).optional(),
+  GOOGLE_SERVICE_ACCOUNT_JSON_PATH: z.string().min(1).optional(),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   API_HOST: z.string().min(1).default("0.0.0.0"),
   CORS_ALLOW_ORIGINS: z.string().optional(),
@@ -63,6 +67,23 @@ if (nodeEnv === "production" && !parsed.data.DATABASE_URL) {
   );
 }
 
+if (!parsed.data.GOOGLE_SERVICE_ACCOUNT_JSON && !parsed.data.GOOGLE_SERVICE_ACCOUNT_JSON_PATH) {
+  throw new Error(
+    "Invalid environment configuration. Provide GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_SERVICE_ACCOUNT_JSON_PATH."
+  );
+}
+
+const googlePlayProductIdsAllowlist = parsed.data.GOOGLE_PLAY_PRODUCT_IDS_ALLOWLIST
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+if (googlePlayProductIdsAllowlist.length === 0) {
+  throw new Error(
+    "Invalid environment configuration. GOOGLE_PLAY_PRODUCT_IDS_ALLOWLIST must include at least one product id."
+  );
+}
+
 const corsAllowOrigins = parsed.data.CORS_ALLOW_ORIGINS
   ? parsed.data.CORS_ALLOW_ORIGINS.split(",")
       .map((origin) => origin.trim())
@@ -79,6 +100,10 @@ export const env = {
   loginTokenTtlMinutes: parsed.data.LOGIN_TOKEN_TTL_MINUTES,
   authRateLimitMaxRequestLink: parsed.data.AUTH_RATE_LIMIT_MAX_REQUEST_LINK,
   authRateLimitWindowMs: parsed.data.AUTH_RATE_LIMIT_WINDOW_MS,
+  googlePlayPackageName: parsed.data.GOOGLE_PLAY_PACKAGE_NAME,
+  googlePlayProductIdsAllowlist,
+  googleServiceAccountJson: parsed.data.GOOGLE_SERVICE_ACCOUNT_JSON ?? null,
+  googleServiceAccountJsonPath: parsed.data.GOOGLE_SERVICE_ACCOUNT_JSON_PATH ?? null,
   apiPort: parsed.data.API_PORT,
   apiHost: parsed.data.API_HOST,
   corsAllowOrigins,

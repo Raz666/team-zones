@@ -1,7 +1,7 @@
 import type { RemoteFlagsPayload } from './types';
 import { isRemoteFlagsPayload } from './validation';
 
-export const FLAGS_URL = 'https://app-docs.razart.pl/flags.json';
+export const FLAGS_URL = 'https://team-zones.razart.eu/flags.json';
 export const FLAGS_TIMEOUT_MS = 8000;
 export const FLAGS_TTL_MS = 6 * 60 * 60 * 1000;
 

@@ -63,6 +63,14 @@ npm run --workspace apps/api db:reset
 npm run --workspace apps/api db:studio
 ```
 
+## DB inspection
+
+- Prisma Studio (recommended):
+  - From repo root: `npm run api:db:studio`
+  - From `apps/api`: `npm run db:studio`
+- SQLite viewer:
+  - Open the SQLite file referenced by `DATABASE_URL` (default: `apps/api/prisma/dev.db`).
+
 ## Endpoints
 
 - `GET /healthz`

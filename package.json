@@ -12,6 +12,7 @@
     "mobile:web": "npm run --workspace apps/mobile web",
     "mobile:test": "npm run --workspace apps/mobile test",
     "mobile:typecheck": "npm run --workspace apps/mobile typecheck",
-    "mobile:generate:policy-css": "npm run --workspace apps/mobile generate:policy-css"
+    "mobile:generate:policy-css": "npm run --workspace apps/mobile generate:policy-css",
+    "api:db:studio": "npm run --workspace apps/api db:studio"
   }
 }

@@ -1,4 +1,4 @@
-﻿import { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "../db/prisma";
@@ -15,6 +15,8 @@ const settingsBodySchema = z.object({
   settings: z.record(z.unknown()),
 });
 
+const settingsQuerySchema = z.object({}).passthrough();
+
 const SETTINGS_RETENTION_COUNT = 20;
 
 export const registerSettingsRoutes = (app: FastifyInstance): void => {
@@ -26,6 +28,11 @@ export const registerSettingsRoutes = (app: FastifyInstance): void => {
     async (request, reply) => {
       if (!request.auth?.userId) {
         return sendError(reply, 401, "UNAUTHORIZED", "Invalid or expired token.");
+      }
+
+      const queryParsed = settingsQuerySchema.safeParse(request.query ?? {});
+      if (!queryParsed.success) {
+        return sendError(reply, 400, "BAD_REQUEST", "Invalid request.");
       }
 
       const userId = request.auth.userId;
@@ -61,6 +68,11 @@ export const registerSettingsRoutes = (app: FastifyInstance): void => {
     async (request, reply) => {
       if (!request.auth?.userId) {
         return sendError(reply, 401, "UNAUTHORIZED", "Invalid or expired token.");
+      }
+
+      const queryParsed = settingsQuerySchema.safeParse(request.query ?? {});
+      if (!queryParsed.success) {
+        return sendError(reply, 400, "BAD_REQUEST", "Invalid request.");
       }
 
       const userId = request.auth.userId;

@@ -46,6 +46,9 @@ const envSchema = z.object({
   RATE_LIMIT_ENABLED: booleanSchema.default(true),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60000),
+  SOFT_DELETE_PURGE_ENABLED: booleanSchema.default(false),
+  SOFT_DELETE_PURGE_AFTER_DAYS: z.coerce.number().int().positive().default(30),
+  SOFT_DELETE_PURGE_INTERVAL_HOURS: z.coerce.number().int().positive().default(12),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -120,6 +123,9 @@ export const env = {
   rateLimitEnabled: parsed.data.RATE_LIMIT_ENABLED,
   rateLimitMax: parsed.data.RATE_LIMIT_MAX,
   rateLimitWindowMs: parsed.data.RATE_LIMIT_WINDOW_MS,
+  softDeletePurgeEnabled: parsed.data.SOFT_DELETE_PURGE_ENABLED,
+  softDeletePurgeAfterDays: parsed.data.SOFT_DELETE_PURGE_AFTER_DAYS,
+  softDeletePurgeIntervalHours: parsed.data.SOFT_DELETE_PURGE_INTERVAL_HOURS,
 } as const;
 
 export type Env = typeof env;

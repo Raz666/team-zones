@@ -19,6 +19,9 @@ export const buildServer = (): FastifyInstance => {
         "req.headers.authorization",
         "req.headers.cookie",
         "req.headers['x-api-key']",
+        "req.body.token",
+        "req.body.refreshToken",
+        "req.body.purchaseToken",
       ],
     },
   });

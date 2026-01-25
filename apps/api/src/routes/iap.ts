@@ -1,4 +1,4 @@
-﻿import { FastifyInstance } from "fastify";
+import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { env } from "../config/env";
@@ -101,6 +101,11 @@ export const registerIapRoutes = (app: FastifyInstance): void => {
 
       const { productId, purchaseToken } = parsed.data;
 
+      app.log.info(
+        { event: "iap.verify.attempt", userId: request.auth.userId, productId },
+        "Purchase verification requested."
+      );
+
       let verified: VerifiedPurchase;
       try {
         verified = await verifyAllowlistedPurchase({
@@ -111,10 +116,28 @@ export const registerIapRoutes = (app: FastifyInstance): void => {
         });
       } catch (error) {
         if (error instanceof Error && error.message === "PRODUCT_NOT_ALLOWED") {
+          app.log.warn(
+            {
+              event: "iap.verify.rejected",
+              reason: "product_not_allowed",
+              userId: request.auth.userId,
+              productId,
+            },
+            "Purchase verification rejected."
+          );
           return sendError(reply, 400, "PRODUCT_NOT_ALLOWED", "Invalid product.");
         }
 
         if (error instanceof Error && error.message === "PURCHASE_NOT_ACTIVE") {
+          app.log.warn(
+            {
+              event: "iap.verify.rejected",
+              reason: "purchase_not_active",
+              userId: request.auth.userId,
+              productId,
+            },
+            "Purchase verification rejected."
+          );
           return sendError(
             reply,
             400,
@@ -124,16 +147,25 @@ export const registerIapRoutes = (app: FastifyInstance): void => {
         }
 
         if (error instanceof Error && error.message === "INVALID_GOOGLE_SERVICE_ACCOUNT") {
-          app.log.error("Invalid Google service account configuration.");
+          app.log.error(
+            { event: "iap.verify.failed", reason: "invalid_service_account" },
+            "Invalid Google service account configuration."
+          );
           return sendError(reply, 500, "SERVER_ERROR", "Server configuration error.");
         }
 
         if (error instanceof Error && error.message === "MISSING_GOOGLE_SERVICE_ACCOUNT") {
-          app.log.error("Missing Google service account configuration.");
+          app.log.error(
+            { event: "iap.verify.failed", reason: "missing_service_account" },
+            "Missing Google service account configuration."
+          );
           return sendError(reply, 500, "SERVER_ERROR", "Server configuration error.");
         }
 
-        app.log.error("Google Play verification failed");
+        app.log.error(
+          { event: "iap.verify.failed", reason: "google_play_error" },
+          "Google Play verification failed."
+        );
         return sendError(reply, 502, "GOOGLE_PLAY_ERROR", "Verification failed.");
       }
 
@@ -193,6 +225,14 @@ export const registerIapRoutes = (app: FastifyInstance): void => {
         });
       } catch (error) {
         if (error instanceof Error && error.message === "PURCHASE_TOKEN_ALREADY_CLAIMED") {
+          app.log.warn(
+            {
+              event: "iap.verify.conflict",
+              userId,
+              productId,
+            },
+            "Purchase token already claimed."
+          );
           return sendError(
             reply,
             409,
@@ -201,9 +241,17 @@ export const registerIapRoutes = (app: FastifyInstance): void => {
           );
         }
 
-        app.log.error({ err: error }, "Failed to record purchase");
+        app.log.error(
+          { event: "iap.verify.failed", reason: "record_failed", userId, productId },
+          "Failed to record purchase."
+        );
         return sendError(reply, 500, "SERVER_ERROR", "Server error.");
       }
+
+      app.log.info(
+        { event: "iap.verify.success", userId, productId },
+        "Purchase verification succeeded."
+      );
 
       return reply.send({
         entitlements: [premiumEntitlement.key],

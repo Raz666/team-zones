@@ -1,9 +1,10 @@
-﻿import { randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { env } from "../config/env";
 import { prisma } from "../db/prisma";
 import { sendMagicLink } from "../lib/email";
+import { maskEmail } from "../lib/privacy";
 import { sendError } from "../lib/httpErrors";
 import { isLoginTokenUsable } from "../lib/auth/loginTokens";
 import { canonicalizeEmail } from "../lib/auth/normalize";
@@ -53,6 +54,10 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
       }
 
       const email = canonicalizeEmail(parsed.data.email);
+      app.log.info(
+        { event: "auth.request_link", email: maskEmail(email) },
+        "Magic link requested."
+      );
       const token = generateOpaqueToken(32);
       const tokenHash = hashToken(token);
       const now = new Date();
@@ -92,6 +97,10 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
     });
 
     if (!loginToken || !isLoginTokenUsable(loginToken, now)) {
+      app.log.warn(
+        { event: "auth.exchange_link.failed", reason: "invalid_or_expired" },
+        "Magic link exchange failed."
+      );
       return sendError(reply, 400, "INVALID_LOGIN_TOKEN", "Invalid login token.");
     }
 
@@ -183,11 +192,30 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
         deviceId: result.device.id,
       });
 
+      app.log.info(
+        {
+          event: "auth.exchange_link.success",
+          userId: result.user.id,
+          deviceId: result.device.id,
+        },
+        "Magic link exchanged."
+      );
+
       return reply.send({
         accessToken,
         refreshToken: result.refreshToken,
       });
-    } catch (_error) {
+    } catch (error) {
+      const reason =
+        error instanceof Error && error.message === "LOGIN_TOKEN_ALREADY_USED"
+          ? "already_used"
+          : "invalid_or_expired";
+
+      app.log.warn(
+        { event: "auth.exchange_link.failed", reason },
+        "Magic link exchange failed."
+      );
+
       return sendError(reply, 400, "INVALID_LOGIN_TOKEN", "Invalid login token.");
     }
   });
@@ -211,6 +239,10 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
     });
 
     if (!existingToken || !isRefreshTokenActive(existingToken, now)) {
+      app.log.warn(
+        { event: "auth.refresh.failed", reason: "invalid_or_expired" },
+        "Refresh token rejected."
+      );
       return sendError(reply, 401, "INVALID_REFRESH_TOKEN", "Invalid refresh token.");
     }
 
@@ -255,6 +287,15 @@ export const registerAuthRoutes = (app: FastifyInstance): void => {
       sub: existingToken.userId,
       deviceId: existingToken.deviceId,
     });
+
+    app.log.info(
+      {
+        event: "auth.refresh.rotated",
+        userId: existingToken.userId,
+        deviceId: existingToken.deviceId,
+      },
+      "Refresh token rotated."
+    );
 
     return reply.send({
       accessToken,

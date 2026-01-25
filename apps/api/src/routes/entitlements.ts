@@ -1,8 +1,11 @@
-﻿import { FastifyInstance } from "fastify";
+import { FastifyInstance } from "fastify";
+import { z } from "zod";
 import { env } from "../config/env";
 import { prisma } from "../db/prisma";
 import { buildEntitlementCertificatePayload } from "../lib/entitlementCertificates";
 import { sendError } from "../lib/httpErrors";
+
+const certificateBodySchema = z.object({}).passthrough();
 
 export const registerEntitlementRoutes = (app: FastifyInstance): void => {
   app.post(
@@ -13,6 +16,11 @@ export const registerEntitlementRoutes = (app: FastifyInstance): void => {
     async (request, reply) => {
       if (!request.auth?.userId) {
         return sendError(reply, 401, "UNAUTHORIZED", "Invalid or expired token.");
+      }
+
+      const parsed = certificateBodySchema.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return sendError(reply, 400, "BAD_REQUEST", "Invalid request.");
       }
 
       const entitlements = await prisma.entitlement.findMany({

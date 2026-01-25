@@ -3,7 +3,13 @@
   "updatedAt": "2026-01-16T00:00:00Z",
   "flags": {
     "debugMenu": {
-      "enabled": true
+      "enabled": false,
+      "allow": [
+        "dvc_x3zhf5ib_1768773417941",
+        "dvc_cjqb8w9c_1768674012374",
+        "dvc_8gh5sxru_1768909045579",
+        "dvc_2f3lzkxq_1768769208706"
+      ]
     },
     "stayOn": {
       "enabled": false,
